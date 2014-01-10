@@ -1,0 +1,6 @@
+name: spaceship_combat
+description: A sample web application
+dependencies:
+  browser: any
+  box2d: any
+  backy: 0.2.1
