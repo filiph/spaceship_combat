@@ -10,19 +10,23 @@ void main() {
   runExperiment();
 }
 
-final int maxGenerations = 10;
-int currentGeneration = 0;
+//final int maxGenerations = 10;
+//int currentGeneration = 0;
+final int generationSize = 5;
 final int maxExperiments = 30;
 int currentExperiment = 0;
 final int winners = 10;
 List records = new List<ExperimentRecord>();
 
-void runExperiment({List<List<Weight>> predefinedBrains}) {
+void runExperiment() {
   List<Weight> weights;
-  if (predefinedBrains == null || predefinedBrains.isEmpty) {
-    weights = null;
+  if (records.length > generationSize) {
+    print("== CREATING MUTANT ==");
+    records.sort((ExperimentRecord a, ExperimentRecord b) => b.finalScore - a.finalScore);
+    ExperimentRecord winner = records[new Math.Random().nextInt(generationSize)];
+    weights = winner.weights;
   } else {
-    weights = predefinedBrains.removeAt(0);
+    weights = null;
   }
   new ShipCombatSituation(scoreOutcomeFunction: scorePutOnNose, precursorWeights: weights).runTest()
     .then((ShipCombatSituation s) {
@@ -38,22 +42,11 @@ void runExperiment({List<List<Weight>> predefinedBrains}) {
       
       currentExperiment++;
       if (currentExperiment < maxExperiments) {
-        runExperiment(predefinedBrains: predefinedBrains);
+        runExperiment();
       } else {
-        currentGeneration++;
-        if (currentGeneration < maxGenerations) {
-          print("=== GENERATION ${currentGeneration}");
-          runNewGeneration();
-        }
+        print("=== END ===");
+        records.forEach(print);
       }
-  });
-}
-
-void runNewGeneration() {
-  records.sort((ExperimentRecord a, ExperimentRecord b) => b.finalScore - a.finalScore);
-  records.forEach(print);
-  records.getRange(0, winners).forEach((ExperimentRecord record) {
-    
   });
 }
 
@@ -160,7 +153,8 @@ class ShipCombatSituation extends Demo {
     bodega.target = messenger;
     
     if (precursorWeights != null) {
-      bodega.brain.setWeights(precursorWeights);
+      _copyFromPrecursor(precursorWeights, bodega.brain.weights);
+      _mutate(bodega.brain.weights, 0.1);
     }
     
 //    print(bodega.brain.weights.first.weights);
@@ -169,6 +163,26 @@ class ShipCombatSituation extends Demo {
 //    print(trainer.trainOnlineSets());
 //    print(bodega.brain.weights.first.weights);
   }
+  
+  void _mutate(List<Weight> weights, num maxDelta) {
+    Math.Random random = new Math.Random();
+    weights.forEach((Weight weight) {
+      for (int i = 0; i < weight.weights.length; i++) {
+        for (int j = 0; j < weight.weights[i].length; j++) {
+          num delta = (random.nextDouble() * 2 - 1) * maxDelta;
+          weight.weights[i][j] += delta.clamp(-1, 1);
+        }
+      }
+    });
+  }
+  
+  void _copyFromPrecursor(List<Weight> precursorWeights, List<Weight> weights) {
+    int len = precursorWeights.length;
+    for (int i = 0; i < len; i++) {
+      weights[i].weights = precursorWeights[i].weights;
+    }
+  }
+  
 
   void _createGround() {
     // Create shape
