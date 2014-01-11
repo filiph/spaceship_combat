@@ -68,6 +68,14 @@ class GeneticAlgorithm<T extends Phenotype> {
   void _evaluateNextGeneration() {
     evaluateLastGeneration()
     .then((_) {
+      print("Generation #${generations.length} evaulation done. Results:");
+      num generationCummulative = 0;
+      generations.last.members.forEach((T member) {
+        print("- ${member.result.toStringAsFixed(2)}");
+        generationCummulative += member.result;
+      });
+      print("- ${generationCummulative.toStringAsFixed(2)} TOTAL");
+      print("---");
       if (currentExperiment >= MAX_EXPERIMENTS) {
         print("All experiments done ($currentExperiment)");
         _doneCompleter.complete();
@@ -147,7 +155,7 @@ abstract class GenerationBreeder<T extends Phenotype> {
     }
     assert(first.result != null);
     assert(second.result != null);
-    if (first.result > second.result) {
+    if (first.result < second.result) {
       return first;
     } else {
       return second;
