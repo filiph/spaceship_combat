@@ -444,13 +444,15 @@ num scorePutOnNose(ShipCombatSituation s) {
 //  print(score);
   statusUpdateCounter++;
   if (statusUpdateCounter == STATUS_UPDATE_FREQ) {
+    var inputs = s.bodega.getInputs();
     statusEl.text = """ 
 Angle (${s.bodega.angleToTarget.toStringAsFixed(2)})
 AnguV (${s.bodega.body.angularVelocity.toStringAsFixed(2)})
 RelV  (${s.bodega.relativeVelocityToTarget.length.toStringAsFixed(2)})
 SCORE = ${score.toStringAsFixed(2)}
 CUMSC = ${s.cummulativeScore.toStringAsFixed(2)}
-OUTP = ${s.bodega.brain.use(s.bodega.getInputs()).map((num o) => o.toStringAsFixed(2)).join(" ")}
+INPT  = ${inputs.map((num o) => o.toStringAsFixed(2)).join(" ")}
+OUTP  = ${s.bodega.brain.use(inputs).map((num o) => o.toStringAsFixed(2)).join(" ")}
 """;
     statusUpdateCounter = 0;
   }

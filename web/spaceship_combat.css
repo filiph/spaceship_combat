@@ -25,3 +25,11 @@ h1, p {
   text-align: center;
   margin-top: 140px;
 }
+
+.floater {
+  width: 40%;
+  position: fixed;
+  right: 0;
+  top: 4em;
+  background: none;
+}
