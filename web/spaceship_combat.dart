@@ -668,7 +668,7 @@ class AIBox2DShip extends Box2DShip {
   
   final Vector2 FORWARD = new Vector2(1.0, 0.0);
   final Vector2 RIGHT = new Vector2(0.0, 1.0);
-  Vector2 get relativeVectorToTarget => body.getLocalVector2(target.body.position);
+  Vector2 get relativeVectorToTarget => body.getLocalPoint(target.body.position);
   num get angleToTarget => 
       Math.acos(relativeVectorToTarget.dot(FORWARD) / (FORWARD.length * relativeVectorToTarget.length)) *
       (relativeVectorToTarget.dot(RIGHT) > 0 ? 1 : -1);
