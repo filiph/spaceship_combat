@@ -257,7 +257,8 @@ class SimpleNeuroPilotGenerationBreeder extends GenerationBreeder<NeuroPilotPhen
     while (newGen.members.length > length) {
       newGen.members.removeLast();
     }
-    newGen.members.forEach((NeuroPilotPhenotype ph) => mutate(ph));
+    newGen.members.skip(1)  // Do not mutate elite.
+      .forEach((NeuroPilotPhenotype ph) => mutate(ph));
     return newGen;
   }
 }
@@ -486,7 +487,7 @@ OUTP  = ${s.bodega.brain.use(inputs).map((num o) => o.toStringAsFixed(2)).join("
   return score; 
 }
 
-typedef num ScoreOutcomeFunction(ShipCombatSituation situation);
+typedef num ShipCombatFitnessFunction(ShipCombatSituation situation);
 
 class ShipCombatSituation extends Demo {
   /** Constructs a new BoxTest. */
@@ -503,7 +504,7 @@ class ShipCombatSituation extends Demo {
   num maxTimeToRun;
   num currentTime = 0;
   
-  ScoreOutcomeFunction scoreOutcomeFunction;
+  ShipCombatFitnessFunction scoreOutcomeFunction;
   num cummulativeScore = 0;
 
   Completer<ShipCombatSituation> _completer = new Completer<ShipCombatSituation>();
@@ -659,7 +660,7 @@ class AIBox2DShip extends Box2DShip {
         super(situation, length, width, position, thrusters: thrusters, initialAngle: initialAngle) {
     var neuron = new TanHNeuron();
     neuron.bias = 1;
-    brain = new Backy([getInputs().length, thrusters.length - 1, thrusters.length], neuron);
+    brain = new Backy([getInputs().length, getInputs().length - 1, thrusters.length], neuron);
   }
   
   Box2DShip target;
