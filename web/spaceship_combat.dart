@@ -18,14 +18,14 @@ void main() {
   var firstGeneration = new Generation<NeuroPilotPhenotype>();
   
   var temp = new ShipCombatSituation();
-  for (int i = 0; i < 5; i++) {
+  for (int i = 0; i < 10; i++) {
     var bodega = new AIBox2DShip(temp, 1.0, 3.0, new Vector2(0.0, 5.0),
-        initialAngle: new Math.Random().nextBool() ? 0 : Math.PI,
-        thrusters: [new Thruster(-1.5, -0.5, 1, 0),
+        thrusters: [new Thruster(-1.5, -0.5, 1, 0),  // Main thrusters
                     new Thruster(-1.5,  0.5, 1, 0),
-                    new Thruster(-1.5, -0.5, 0, 0.2),
+                    new Thruster( 1.5,    0, -0.5, 0), // Retarder
+                    new Thruster(-1.5, -0.5, 0, 0.2), // Back maneuverability
                     new Thruster(-1.5,  0.5, 0, -0.2),
-                    new Thruster( 1.5, -0.5, 0, 0.2),
+                    new Thruster( 1.5, -0.5, 0, 0.2),  // Front maneuverability
                     new Thruster( 1.5,  0.5, 0, -0.2)]);
     firstGeneration.members.add(new NeuroPilotPhenotype.fromBackyWeights(bodega.brain.weights));
   }
@@ -136,8 +136,8 @@ class Generation<T extends Phenotype> {
 }
 
 abstract class GenerationBreeder<T extends Phenotype> {
-  num mutationRate = 0.02;
-  num mutationStrength = 0.1;
+  num mutationRate = 0.05;
+  num mutationStrength = 0.05;
   
   Generation<T> breedNewGeneration(List<Generation> precursors);
   
@@ -213,11 +213,18 @@ class SimpleNeuroPilotGenerationBreeder extends GenerationBreeder<NeuroPilotPhen
   
   Generation<NeuroPilotPhenotype> breedNewGeneration(List<Generation> precursors) {
     Generation<NeuroPilotPhenotype> newGen = new Generation<NeuroPilotPhenotype>();
-    List<NeuroPilotPhenotype> pool = precursors.last.members;
+    List<NeuroPilotPhenotype> pool = precursors.last.members.toList(growable: false);
+    pool.sort((NeuroPilotPhenotype a, NeuroPilotPhenotype b) => a.result - b.result);
     int length = precursors.last.members.length;
+    // Elitism
+    NeuroPilotPhenotype clone1 = new NeuroPilotPhenotype();
+    clone1.genes = pool.first.genes;
+    print("Cloning the elite (with result ${pool.first.result}): $clone1");
+    // Crossover breeding
     while (newGen.members.length < length) {
       NeuroPilotPhenotype parent1 = getRandomTournamentWinner(pool);
       NeuroPilotPhenotype parent2 = getRandomTournamentWinner(pool); // TODO: make sure it's not duplicate?
+      print("Breeding parents with results ${parent1.result} and ${parent2.result}");
       NeuroPilotPhenotype child1 = new NeuroPilotPhenotype();
       NeuroPilotPhenotype child2 = new NeuroPilotPhenotype();
       List<List<num>> childrenGenes = crossoverParents(parent1, parent2);
@@ -263,10 +270,11 @@ abstract class PhenotypeSerialEvaluator<T extends Phenotype>
     });
   }
   
-  num cummulativeResult = 0;
+  num cummulativeResult;
   
   Future<num> evaluate(T phenotype) {
     print("Evaluating $phenotype");
+    cummulativeResult = 0;
     _completer = new Completer();
     _next(phenotype, 0);
     return _completer.future;
@@ -338,14 +346,14 @@ class NeuroPilotSerialEvaluator extends PhenotypeSerialEvaluator<NeuroPilotPheno
         print("- to the left");
         s.bodega.body.setTransform(new Vector2(0.0, 0.0), Math.PI / 4);
       },
-      (ShipCombatSituation s) {
-        print("- to the right");
-        s.bodega.body.setTransform(new Vector2(0.0, 0.0), 3 * Math.PI / 4);
-      },
-      (ShipCombatSituation s) {
-        print("- back");
-        s.bodega.body.setTransform(new Vector2(0.0, 0.0), - Math.PI / 2);
-      },
+//      (ShipCombatSituation s) {
+//        print("- to the right");
+//        s.bodega.body.setTransform(new Vector2(0.0, 0.0), 3 * Math.PI / 4);
+//      },
+//      (ShipCombatSituation s) {
+//        print("- back");
+//        s.bodega.body.setTransform(new Vector2(0.0, 0.0), - Math.PI / 2);
+//      },
       (ShipCombatSituation s) {
         print("- back slightly off");
         s.bodega.body.setTransform(new Vector2(0.0, 0.0), - Math.PI / 2 + 0.1);
@@ -510,11 +518,12 @@ class ShipCombatSituation extends Demo {
     assert (null != world);
     //_createGround();
     bodega = new AIBox2DShip(this, 1.0, 3.0, new Vector2(0.0, 5.0),
-        thrusters: [new Thruster(-1.5, -0.5, 1, 0),
+        thrusters: [new Thruster(-1.5, -0.5, 1, 0),  // Main thrusters
                     new Thruster(-1.5,  0.5, 1, 0),
-                    new Thruster(-1.5, -0.5, 0, 0.2),
+                    new Thruster( 1.5,    0, -0.5, 0), // Retarder
+                    new Thruster(-1.5, -0.5, 0, 0.2), // Back maneuverability
                     new Thruster(-1.5,  0.5, 0, -0.2),
-                    new Thruster( 1.5, -0.5, 0, 0.2),
+                    new Thruster( 1.5, -0.5, 0, 0.2),  // Front maneuverability
                     new Thruster( 1.5,  0.5, 0, -0.2)]);
     // Add to list
     bodies.add(bodega.body);
