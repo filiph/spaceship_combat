@@ -136,7 +136,7 @@ class Generation<T extends Phenotype> {
 }
 
 abstract class GenerationBreeder<T extends Phenotype> {
-  num mutationRate = 0.1;
+  num mutationRate = 0.02;
   num mutationStrength = 0.1;
   
   Generation<T> breedNewGeneration(List<Generation> precursors);
