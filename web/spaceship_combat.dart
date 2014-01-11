@@ -4,87 +4,448 @@ import 'dart:async';
 import 'package:box2d/box2d_browser.dart';
 import 'dart:math' as Math;
 import 'package:backy/backy.dart';
+import 'dart:convert';
+
+PreElement statusEl;
+int STATUS_UPDATE_FREQ = 10;
+int statusUpdateCounter = 0;
 
 void main() {
 //  DivElement el = querySelector("#sample_container_id");
-  runExperiment();
-}
-
-//final int maxGenerations = 10;
-//int currentGeneration = 0;
-final int generationSize = 5;
-final int maxExperiments = 30;
-int currentExperiment = 0;
-final int winners = 10;
-List records = new List<ExperimentRecord>();
-
-void runExperiment() {
-  List<Weight> weights;
-  if (records.length > generationSize) {
-    print("== CREATING MUTANT ==");
-    records.sort((ExperimentRecord a, ExperimentRecord b) => b.finalScore - a.finalScore);
-    ExperimentRecord winner = records[new Math.Random().nextInt(generationSize)];
-    weights = winner.weights;
-  } else {
-    weights = null;
+//  runExperiment();
+  statusEl = querySelector("#status");
+  
+  var firstGeneration = new Generation<NeuroPilotPhenotype>();
+  
+  var temp = new ShipCombatSituation();
+  for (int i = 0; i < 5; i++) {
+    var bodega = new AIBox2DShip(temp, 1.0, 3.0, new Vector2(0.0, 5.0),
+        initialAngle: new Math.Random().nextBool() ? 0 : Math.PI,
+        thrusters: [new Thruster(-1.5, -0.5, 1, 0),
+                    new Thruster(-1.5,  0.5, 1, 0),
+                    new Thruster(-1.5, -0.5, 0, 0.2),
+                    new Thruster(-1.5,  0.5, 0, -0.2),
+                    new Thruster( 1.5, -0.5, 0, 0.2),
+                    new Thruster( 1.5,  0.5, 0, -0.2)]);
+    firstGeneration.members.add(new NeuroPilotPhenotype.fromBackyWeights(bodega.brain.weights));
   }
-  new ShipCombatSituation(scoreOutcomeFunction: scorePutOnNose, precursorWeights: weights).runTest()
-    .then((ShipCombatSituation s) {
-      num score = scorePutOnNose(s);
-      print("Score: $score");
-      print("Angular Velocity: ${s.bodega.body.angularVelocity}");
-      num lengthsProduct = 1 * s.bodega.relativeVectorToTarget.length;
-      print("Dot Product: ${s.bodega.relativeVectorToTarget.dot(new Vector2(1.0, 0.0)) / lengthsProduct}");
-      
-      records.add(new ExperimentRecord(s.bodega.brain.getWeights(), score, s.currentTime));
-      
-      s.destroy();
-      
-      currentExperiment++;
-      if (currentExperiment < maxExperiments) {
-        runExperiment();
-      } else {
-        print("=== END ===");
-        records.forEach(print);
-      }
+  
+  var evaluator = new NeuroPilotSerialEvaluator();
+  var breeder = new SimpleNeuroPilotGenerationBreeder();
+  
+  var algo = new GeneticAlgorithm(firstGeneration, evaluator, breeder);
+  algo.runUntilDone()
+  .then((_) {
+    algo.generations.last.members.forEach(print);
   });
 }
 
-void _modifyWeightsFromSource(List<Weight> weights, List<Weight> source, num maxDelta) {
-  int len = weights.length;
-  List<Weight> newWeights = new List<Weight>(len);
-  for (int i = 0; i < len; i++) {
-    Weight orig = weights[i];
-    newWeights[i] = new Weight(orig.width, orig.height, orig.neuron, 0, orig.backy);
+class GeneticAlgorithm<T extends Phenotype> {
+  final int GENERATION_SIZE;
+  final int MAX_EXPERIMENTS = 10000;
+  final num THRESHOLD_RESULT = 0.01;
+  final int MAX_GENERATIONS_IN_MEMORY = 100;
+  
+  int currentExperiment = 0;
+  
+  List<Generation<T>> generations = new List<Generation>();
+  Iterable<T> get population => generations.expand((Generation<T> gen) => gen.members);
+  final PhenotypeEvaluator evaluator;
+  final GenerationBreeder breeder;
+  
+  GeneticAlgorithm(Generation firstGeneration, this.evaluator, this.breeder) 
+      : GENERATION_SIZE = firstGeneration.members.length {
+    generations.add(firstGeneration);
+  }
+  
+  Completer _doneCompleter;
+  Future runUntilDone() {
+    _doneCompleter = new Completer();
+    _evaluateNextGeneration();
+    return _doneCompleter.future;
+  }
+  
+  void _evaluateNextGeneration() {
+    evaluateLastGeneration()
+    .then((_) {
+      if (currentExperiment >= MAX_EXPERIMENTS) {
+        print("All experiments done ($currentExperiment)");
+        _doneCompleter.complete();
+        return;
+      }
+      if (generations.last.members
+          .any((T ph) => ph.result < THRESHOLD_RESULT)) {
+        print("One of the phenotypes got over the threshold.");
+        _doneCompleter.complete();
+        return;
+      }
+      _createNewGeneration();
+      _evaluateNextGeneration();
+    });
+  }
+  
+  void _createNewGeneration() {
+    print("CREATING NEW GENERATION");
+    generations.add(breeder.breedNewGeneration(generations));
+    generations.last.members.forEach(print);
+    while (generations.length > MAX_GENERATIONS_IN_MEMORY) {
+      print("- exceeding max generations, removing one from memory");
+      generations.removeAt(0);
+    }
+  }
+  
+  int memberIndex;
+  void _evaluateNextGenerationMember() {
+    T currentPhenotype = generations.last.members[memberIndex];
+    evaluator.evaluate(currentPhenotype)
+    .then((num result) {
+      currentPhenotype.result = result;
+      
+      currentExperiment++;
+      memberIndex++;
+      if (memberIndex < generations.last.members.length) {
+        _evaluateNextGenerationMember();
+      } else {
+        _generationCompleter.complete();
+        return;
+      }
+    });
+  }
+  
+  Completer _generationCompleter;
+  Future evaluateLastGeneration() {
+    _generationCompleter = new Completer();
+    
+    memberIndex = 0;
+    _evaluateNextGenerationMember();
+    
+    return _generationCompleter.future;
   }
 }
+
+class Generation<T extends Phenotype> {
+  List<T> members = new List<T>();
+}
+
+abstract class GenerationBreeder<T extends Phenotype> {
+  num mutationRate = 0.1;
+  num mutationStrength = 0.1;
+  
+  Generation<T> breedNewGeneration(List<Generation> precursors);
+  
+  /**
+   * Picks two phenotypes from the pool at random, compares them, and returns
+   * the one with the better fitness.
+   */
+  T getRandomTournamentWinner(List<T> pool) {
+    Math.Random random = new Math.Random();
+    T first = pool[random.nextInt(pool.length)];
+    T second;
+    while (true) {
+      second = pool[random.nextInt(pool.length)];
+      if (second != first) break;
+    }
+    assert(first.result != null);
+    assert(second.result != null);
+    if (first.result > second.result) {
+      return first;
+    } else {
+      return second;
+    }
+  }
+  
+  void mutate(T phenotype, {num mutationRate, num mutationStrength}) {
+    if (mutationRate == null) mutationRate = this.mutationRate;
+    if (mutationStrength == null) mutationStrength = this.mutationStrength;
+    Math.Random random = new Math.Random();
+    for (int i = 0; i < phenotype.genes.length; i++) {
+      if (random.nextDouble() < mutationRate) {
+        phenotype.genes[i] = phenotype.mutateGene(phenotype.genes[i], mutationStrength);
+      }
+    }
+  }
+  
+  /**
+   * Returns a [List] of length 2 (2 children), each having a List of genes
+   * created by crossing over parents' genes.
+   */
+  List<List<Object>> crossoverParents(T a, T b, {int crossoverPointsCount: 2}) {
+    assert(crossoverPointsCount < a.genes.length - 1);
+    int length = a.genes.length;
+    assert(length == b.genes.length);
+    Set<int> crossoverPoints = new Set<int>();
+
+    Math.Random random = new Math.Random();
+    // Genes:   0 1 2 3 4 5 6
+    // Xpoints:  0 1 2 3 4 5
+    while (crossoverPoints.length < crossoverPointsCount) {
+      crossoverPoints.add(random.nextInt(length - 1));
+    }
+    List<Object> child1genes = new List(length);
+    List<Object> child2genes = new List(length);
+    bool crossover = false;
+    for (int i = 0; i < length; i++) {
+      if (!crossover) {
+        child1genes[i] = a.genes[i];
+        child2genes[i] = b.genes[i];
+      } else {
+        child1genes[i] = b.genes[i];
+        child2genes[i] = a.genes[i];
+      }
+      if (crossoverPoints.contains(i)) {
+        crossover = !crossover;
+      }
+    }
+    return [child1genes, child2genes];
+  }
+   
+}
+
+class SimpleNeuroPilotGenerationBreeder extends GenerationBreeder<NeuroPilotPhenotype> {
+  
+  Generation<NeuroPilotPhenotype> breedNewGeneration(List<Generation> precursors) {
+    Generation<NeuroPilotPhenotype> newGen = new Generation<NeuroPilotPhenotype>();
+    List<NeuroPilotPhenotype> pool = precursors.last.members;
+    int length = precursors.last.members.length;
+    while (newGen.members.length < length) {
+      NeuroPilotPhenotype parent1 = getRandomTournamentWinner(pool);
+      NeuroPilotPhenotype parent2 = getRandomTournamentWinner(pool); // TODO: make sure it's not duplicate?
+      NeuroPilotPhenotype child1 = new NeuroPilotPhenotype();
+      NeuroPilotPhenotype child2 = new NeuroPilotPhenotype();
+      List<List<num>> childrenGenes = crossoverParents(parent1, parent2);
+      assert(childrenGenes.length == 2);
+      child1.genes = childrenGenes[0];
+      child2.genes = childrenGenes[1];
+      newGen.members.add(child1);
+      newGen.members.add(child2);
+    }
+    // Remove the phenotypes over length.
+    while (newGen.members.length > length) {
+      newGen.members.removeLast();
+    }
+    newGen.members.forEach((NeuroPilotPhenotype ph) => mutate(ph));
+    return newGen;
+  }
+}
+
+abstract class PhenotypeEvaluator<T extends Phenotype> {
+  PhenotypeEvaluator();
+  Completer _completer;
+  Future<num> evaluate(T phenotype);
+}
+
+abstract class PhenotypeSerialEvaluator<T extends Phenotype> 
+      extends PhenotypeEvaluator<T> {
+  Future<num> runOneEvaluation(T phenotype, int experimentIndex);
+  
+  void _next(T phenotype, int experimentIndex) {
+    runOneEvaluation(phenotype, experimentIndex)
+    .then((num result) {
+      if (result == null) {
+        print("Cummulative result for phenotype: $cummulativeResult");
+        _completer.complete(cummulativeResult);
+      } else if (result.isInfinite) {
+        print("Result for experiment #$experimentIndex: FAIL\nFailing phenotype");
+        _completer.complete(double.INFINITY);
+      } else {
+        cummulativeResult += result;
+        print("Result for experiment: $result (cummulative: $cummulativeResult)");
+        _next(phenotype, experimentIndex + 1);
+      }
+    });
+  }
+  
+  num cummulativeResult = 0;
+  
+  Future<num> evaluate(T phenotype) {
+    print("Evaluating $phenotype");
+    _completer = new Completer();
+    _next(phenotype, 0);
+    return _completer.future;
+  }
+}
+
+abstract class Phenotype<T> {
+  List<T> genes;
+  num result = null;
+  
+//  Phenotype<T> clone() {
+//    Phenotype<T> copy = new Phenotype<T>();
+//    copy.genes = new List<T>.from(genes, growable: false);
+//  }
+  
+  T mutateGene(T gene, num strength);
+  
+  toString() => "Phenotype<${JSON.encode(genes)}>";
+}
+
+class NeuroPilotPhenotype extends Phenotype<num> {
+  NeuroPilotPhenotype();
+  
+  NeuroPilotPhenotype.fromBackyWeights(List<Weight> weightObjects) {
+    List<List<List<num>>> weights = new List<List<List<num>>>(weightObjects.length);
+    for (int i = 0; i < weightObjects.length; i++) {
+      List<List<num>> array = weightObjects[i].weights;
+      weights[i] = new List<List<num>>(array.length);
+      for (int j = 0; j < array.length; j++) {
+        weights[i][j] = new List<num>(array[j].length);
+        for (int k = 0; k < array[j].length; k++) {
+          weights[i][j][k] = array[j][k];
+        }
+      }
+    }
+    genes = weights.expand((List<List<num>> planes) => planes.expand((List<num> rows) => rows)).toList(growable: false);
+  }
+  
+  List<num> genes;
+  
+//  List<List<List<num>>> weights;
+  
+//  List<num> get genes => weights.expand((List<List<num>> planes) => planes.expand((List<num> rows) => rows)).toList(growable: false);
+//  
+//  set genes(List<num> value) {
+//    int n = 0;
+//    for (int i = 0; i < weights.length; i++) {
+//      for (int j = 0; j < weights[i].length; j++) {
+//        for (int k = 0; k < weights[i][j].length; k++) {
+//          weights[i][j][k] = value[n];
+//          n++;
+//        }
+//      }
+//    }
+//    assert(n == value.length);
+//  }
+
+  num mutateGene(num gene, num strength) {
+    Math.Random random = new Math.Random();
+    num delta = (random.nextDouble() * 2 - 1) * strength;
+    return (gene + delta).clamp(-1, 1);
+  }
+}
+
+class NeuroPilotSerialEvaluator extends PhenotypeSerialEvaluator<NeuroPilotPhenotype> {
+  
+  List<SetupFunction> setupFunctions = [
+      (ShipCombatSituation s) {
+        print("- to the left");
+        s.bodega.body.setTransform(new Vector2(0.0, 0.0), Math.PI / 4);
+      },
+      (ShipCombatSituation s) {
+        print("- to the right");
+        s.bodega.body.setTransform(new Vector2(0.0, 0.0), 3 * Math.PI / 4);
+      },
+      (ShipCombatSituation s) {
+        print("- back");
+        s.bodega.body.setTransform(new Vector2(0.0, 0.0), - Math.PI / 2);
+      },
+      (ShipCombatSituation s) {
+        print("- back slightly off");
+        s.bodega.body.setTransform(new Vector2(0.0, 0.0), - Math.PI / 2 + 0.1);
+      }
+  ];
+  
+  Future<num> runOneEvaluation(NeuroPilotPhenotype phenotype, int i) {
+    print("Experiment $i");
+    if (i >= setupFunctions.length) {
+      return new Future.value(null);
+    }
+    ShipCombatSituation s = 
+        new ShipCombatSituation(scoreOutcomeFunction: scorePutOnNose, 
+            phenotype: phenotype);
+    setupFunctions[i](s);
+    return s.runTest().then((ShipCombatSituation s) {
+      s.destroy();
+      return s.cummulativeScore;
+    });
+  }
+}
+
+
+
+
+typedef void SetupFunction(ShipCombatSituation s);
+
+//void runExperiment() {
+//  List<Weight> weights;
+//  if (records.length > generationSize) {
+//    print("== CREATING MUTANT ==");
+//    records.sort((ExperimentRecord a, ExperimentRecord b) => b.finalScore - a.finalScore);
+//    ExperimentRecord winner = records[new Math.Random().nextInt(generationSize)];
+//    weights = winner.weights;
+//  } else {
+//    weights = null;
+//  }
+//  
+//  List<ExperimentRecord> phenotypeRecords = new List();
+//  
+//  Future.wait(setupFunctions.map((SetupFunction setupFunction) {
+//    ShipCombatSituation s = 
+//        new ShipCombatSituation(scoreOutcomeFunction: scorePutOnNose, phenotype: weights);
+//    setupFunction(s);
+//    return s.runTest();
+//  })).then((List<ShipCombatSituation> situations) {
+//    situations.forEach((ShipCombatSituation s) {
+//      num score = scorePutOnNose(s);
+//      print("Score: $score");
+//      print("Angular Velocity: ${s.bodega.body.angularVelocity}");
+//      num lengthsProduct = 1 * s.bodega.relativeVectorToTarget.length;
+//      print("Angle: ${s.bodega.angleToTarget}");
+//      
+//      phenotypeRecords.add(new ExperimentRecord(s.bodega.brain.getWeights(), score, s.currentTime));
+//      
+//      s.destroy();
+//    });
+//    
+//    phenotypeRecords.sort((ExperimentRecord a, ExperimentRecord b) => a.finalScore - b.finalScore);
+//    
+//    // Take the words record
+//    records.add(phenotypeRecords.first);
+//    
+//    currentExperiment++;
+//    if (currentExperiment < maxExperiments) {
+//      runExperiment();
+//    } else {
+//      print("=== END ===");
+//      records.forEach(print);
+//    }
+//  });
+//  
+//}
 
 class ExperimentRecord {
   num finalScore;
   num timeToAchieve;
   List<Weight> weights;
   ExperimentRecord(this.weights, this.finalScore, this.timeToAchieve);
+  List weightsToList() => weights.map((Weight w) => w.weights).toList(growable: false);
   String toString() {
     return "Experiment: score = $finalScore, timeToAchieve = $timeToAchieve\n"
-        "$weights\n\n";
+        "${JSON.encode(weightsToList())}\n\n";
   }
 }
 
 num scorePutOnNose(ShipCombatSituation s) {
   if (s.world.contactCount > 0) {
-    return double.NEGATIVE_INFINITY;  // Autofail.
+    return double.INFINITY;  // Autofail.
   }
-  num lengthsProduct = 1 * s.bodega.relativeVectorToTarget.length;
-  num dotproduct = s.bodega.relativeVectorToTarget.dot(new Vector2(1.0, 0.0)) / lengthsProduct;
-  num dotScore = dotproduct < 0 ? 0 : dotproduct * dotproduct;
+  num angleScore = s.bodega.angleToTarget.abs();
+  num angularScore = s.bodega.body.angularVelocity.abs();
+  num relativeScore = s.bodega.relativeVelocityToTarget.length;
   
-  num angularVelocity = s.bodega.body.angularVelocity;
-  num angularScore = (1 - angularVelocity.abs()).clamp(0, 1);
-  
-  num relativeScore = (1 - (s.bodega.relativeVelocityToTarget.length / 10)).clamp(0, 1);
-  
-  num score = (2 * dotScore + angularScore + relativeScore) / 4;
+  num score = 2 * angleScore + angularScore + relativeScore;
 //  print(score);
+  statusUpdateCounter++;
+  if (statusUpdateCounter == STATUS_UPDATE_FREQ) {
+    statusEl.text = """ 
+Angle (${s.bodega.angleToTarget.toStringAsFixed(2)})
+AnguV (${s.bodega.body.angularVelocity.toStringAsFixed(2)})
+RelV  (${s.bodega.relativeVelocityToTarget.length.toStringAsFixed(2)})
+SCORE = ${score.toStringAsFixed(2)}
+CUMSC = ${s.cummulativeScore.toStringAsFixed(2)}
+OUTP = ${s.bodega.brain.use(s.bodega.getInputs()).map((num o) => o.toStringAsFixed(2)).join(" ")}
+""";
+    statusUpdateCounter = 0;
+  }
   return score; 
 }
 
@@ -92,26 +453,25 @@ typedef num ScoreOutcomeFunction(ShipCombatSituation situation);
 
 class ShipCombatSituation extends Demo {
   /** Constructs a new BoxTest. */
-  ShipCombatSituation({this.scoreOutcomeFunction, this.successThreshold: 1.0, this.maxTimeToRun: 1000,
-      this.precursorWeights}) : super("Box test", new Vector2(0.0, 0.0)) {
-    
+  ShipCombatSituation({this.scoreOutcomeFunction, this.maxTimeToRun: 1000,
+      this.phenotype}) : super("Box test", new Vector2(0.0, 0.0)) {
+    initialize();
   }
   
   /**
    * Parent's weights.
    */
-  List<Weight> precursorWeights;
+  NeuroPilotPhenotype phenotype;
   
   num maxTimeToRun;
   num currentTime = 0;
   
   ScoreOutcomeFunction scoreOutcomeFunction;
-  num successThreshold;
+  num cummulativeScore = 0;
 
   Completer<ShipCombatSituation> _completer = new Completer<ShipCombatSituation>();
   
   Future runTest() {
-    initialize();
     initializeAnimation();
     runAnimation(updateCallback);
     return _completer.future;
@@ -126,10 +486,12 @@ class ShipCombatSituation extends Demo {
     }
     if (scoreOutcomeFunction != null) {
       num score = scoreOutcomeFunction(this);
-      if (score >= successThreshold || score == double.NEGATIVE_INFINITY) {
+      if (score.isInfinite) {
+        cummulativeScore = double.INFINITY;
         _completer.complete(this);
         return false;
       }
+      cummulativeScore += score;
     }
     return true; // continue
   }
@@ -138,11 +500,12 @@ class ShipCombatSituation extends Demo {
     assert (null != world);
     //_createGround();
     bodega = new AIBox2DShip(this, 1.0, 3.0, new Vector2(0.0, 5.0),
-        initialAngle: new Math.Random().nextBool() ? 0 : Math.PI,
         thrusters: [new Thruster(-1.5, -0.5, 1, 0),
                     new Thruster(-1.5,  0.5, 1, 0),
-                    new Thruster( 1.5, -0.5, 0.1, 0.2),
-                    new Thruster( 1.5,  0.5, 0.1, -0.2)]);
+                    new Thruster(-1.5, -0.5, 0, 0.2),
+                    new Thruster(-1.5,  0.5, 0, -0.2),
+                    new Thruster( 1.5, -0.5, 0, 0.2),
+                    new Thruster( 1.5,  0.5, 0, -0.2)]);
     // Add to list
     bodies.add(bodega.body);
     
@@ -152,9 +515,8 @@ class ShipCombatSituation extends Demo {
     
     bodega.target = messenger;
     
-    if (precursorWeights != null) {
-      _copyFromPrecursor(precursorWeights, bodega.brain.weights);
-      _mutate(bodega.brain.weights, 0.1);
+    if (phenotype != null) {
+      _copyFromPhenotype(phenotype, bodega.brain.weights);
     }
     
 //    print(bodega.brain.weights.first.weights);
@@ -164,23 +526,18 @@ class ShipCombatSituation extends Demo {
 //    print(bodega.brain.weights.first.weights);
   }
   
-  void _mutate(List<Weight> weights, num maxDelta) {
-    Math.Random random = new Math.Random();
-    weights.forEach((Weight weight) {
-      for (int i = 0; i < weight.weights.length; i++) {
-        for (int j = 0; j < weight.weights[i].length; j++) {
-          num delta = (random.nextDouble() * 2 - 1) * maxDelta;
-          weight.weights[i][j] += delta.clamp(-1, 1);
+  void _copyFromPhenotype(NeuroPilotPhenotype phenotype, List<Weight> weights) {
+    List<num> genes = phenotype.genes;
+    int n = 0;
+    for (int i = 0; i < weights.length; i++) {
+      for (int j = 0; j < weights[i].weights.length; j++) {
+        for (int k = 0; k < weights[i].weights[j].length; k++) {
+          weights[i].weights[j][k] = genes[n];
+          n++;
         }
       }
-    });
-  }
-  
-  void _copyFromPrecursor(List<Weight> precursorWeights, List<Weight> weights) {
-    int len = precursorWeights.length;
-    for (int i = 0; i < len; i++) {
-      weights[i].weights = precursorWeights[i].weights;
     }
+    assert(n == genes.length);
   }
   
 
@@ -263,14 +620,16 @@ class AIBox2DShip extends Box2DShip {
       Vector2 position, {num initialAngle: 0, List thrusters: const[]}) : 
         super(situation, length, width, position, thrusters: thrusters, initialAngle: initialAngle) {
     var neuron = new TanHNeuron();
-    neuron.bias = 2;
-    brain = new Backy([getInputs().length, getInputs().length - 1, thrusters.length], neuron);
+    neuron.bias = 1;
+    brain = new Backy([getInputs().length, thrusters.length - 1, thrusters.length], neuron);
   }
   
   Box2DShip target;
   Backy brain;
   
+  final Vector2 FORWARD = new Vector2(1.0, 0.0);
   Vector2 get relativeVectorToTarget => body.getLocalVector2(target.body.position);
+  num get angleToTarget => relativeVectorToTarget.dot(FORWARD) / (FORWARD.length * relativeVectorToTarget.length);
   Vector2 get relativeVelocityToTarget => 
       body.getLinearVelocityFromLocalPoint(new Vector2(0.0, 0.0)).sub(target.body.getLinearVelocityFromLocalPoint(new Vector2(0.0, 0.0)));
   
