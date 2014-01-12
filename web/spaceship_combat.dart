@@ -671,7 +671,7 @@ class AIBox2DShip extends Box2DShip {
         super(situation, length, width, position, thrusters: thrusters, initialAngle: initialAngle) {
     var neuron = new TanHNeuron();
     neuron.bias = 1;
-    brain = new Backy([getInputs().length, 3, thrusters.length], neuron);
+    brain = new Backy([getInputs().length, 4, thrusters.length], neuron);
   }
   
   Box2DShip target;
@@ -786,26 +786,32 @@ abstract class Demo {
     world = new World(gravity, doSleep, new DefaultWorldPool());
   }
 
+  static int COMPUTATION_TO_SHOW_RATION = 10;
+  
   /** Advances the world forward by timestep seconds. */
   void step(num timestamp, [Function updateCallback]) {
-//    _stopwatch.reset();
-    world.step(TIME_STEP, VELOCITY_ITERATIONS, POSITION_ITERATIONS);
-//    elapsedUs = _stopwatch.elapsedMicroseconds;
+    
+    bool shouldContinue = true;
+    for (int i = 0; i < COMPUTATION_TO_SHOW_RATION; i++) {
+      world.step(TIME_STEP, VELOCITY_ITERATIONS, POSITION_ITERATIONS);
+      
+      if (updateCallback != null) {
+        shouldContinue = updateCallback(1);
+        if (!shouldContinue) {
+          break;
+        }
+      }
+    }
 
     // Clear the animation panel and draw new frame.
     ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
     world.drawDebugData();
-//    ++frameCount;
 
-    new Future(() {
-      if (updateCallback != null) {
-        bool cont = updateCallback(1);
-        if (!cont) {
-          return;
-        }
-      }
-      step(1, updateCallback);
-    });
+    if (shouldContinue) {
+      new Future(() {
+        step(1, updateCallback);
+      });
+    }
     
 //    window.requestAnimationFrame((num time) {
 //      if (updateCallback != null) {
