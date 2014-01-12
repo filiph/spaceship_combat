@@ -89,11 +89,14 @@ class GeneticAlgorithm<T extends Phenotype> {
     .then((_) {
       print("Generation #${generations.length} evaulation done. Results:");
       num generationCummulative = 0;
+      num generationBest = double.INFINITY;
       generations.last.members.forEach((T member) {
         print("- ${member.result.toStringAsFixed(2)}");
         generationCummulative += member.result;
+        if (member.result < generationBest) generationBest = member.result;
       });
       print("- ${generationCummulative.toStringAsFixed(2)} TOTAL");
+      print("- ${generationBest.toStringAsFixed(2)} BEST");
       print("---");
       if (currentExperiment >= MAX_EXPERIMENTS) {
         print("All experiments done ($currentExperiment)");
@@ -114,7 +117,9 @@ class GeneticAlgorithm<T extends Phenotype> {
   void _createNewGeneration() {
     print("CREATING NEW GENERATION");
     generations.add(breeder.breedNewGeneration(generations));
-    generations.last.members.forEach(print);
+    print("var newGen = [");
+    generations.last.members.forEach((ph) => print("${ph.genesAsString},"));
+    print("];");
     while (generations.length > MAX_GENERATIONS_IN_MEMORY) {
       print("- exceeding max generations, removing one from memory");
       generations.removeAt(0);
@@ -313,7 +318,9 @@ abstract class Phenotype<T> {
   
   T mutateGene(T gene, num strength);
   
-  toString() => "Phenotype<${JSON.encode(genes)}>";
+  toString() => "Phenotype<$genesAsString>";
+  
+  String get genesAsString => JSON.encode(genes);
 }
 
 class NeuroPilotPhenotype extends Phenotype<num> {
@@ -462,14 +469,17 @@ class ExperimentRecord {
 }
 
 num scorePutOnNose(ShipCombatSituation s) {
-  if (s.world.contactCount > 0) {
-    return double.INFINITY;  // Autofail.
-  }
   num angleScore = s.bodega.angleToTarget.abs();
   num angularScore = s.bodega.body.angularVelocity.abs();
   num relativeScore = s.bodega.relativeVelocityToTarget.length;
   
   num score = (Math.pow(10 * angleScore, 2) + angularScore + relativeScore);
+  
+  if (s.world.contactCount > 0) {
+//    return double.INFINITY;  // Autofail.
+    score += 500000;
+  }
+  
 //  print(score);
   statusUpdateCounter++;
   if (statusUpdateCounter == STATUS_UPDATE_FREQ) {
@@ -661,7 +671,7 @@ class AIBox2DShip extends Box2DShip {
         super(situation, length, width, position, thrusters: thrusters, initialAngle: initialAngle) {
     var neuron = new TanHNeuron();
     neuron.bias = 1;
-    brain = new Backy([getInputs().length, getInputs().length - 1, thrusters.length], neuron);
+    brain = new Backy([getInputs().length, /*getInputs().length - 1,*/ thrusters.length], neuron);
   }
   
   Box2DShip target;
@@ -678,7 +688,9 @@ class AIBox2DShip extends Box2DShip {
   
   List<num> getInputs() {
     List<num> inputs = new List();
-    inputs.add(body.angularVelocity);
+    num angVel = body.angularVelocity.clamp(-2, 2); //<-2,2>
+    inputs.add(angVel >= 0 ? angVel - 1  : -1);
+    inputs.add(angVel <  0 ? -angVel - 1 : -1);
     if (target == null) {
       inputs.addAll([0,0,0,0]);
     } else {
