@@ -67,7 +67,8 @@ void main() {
   var algo = new GeneticAlgorithm(firstGeneration, evaluator, breeder);
   algo.runUntilDone()
   .then((_) {
-    algo.generations.last.members.forEach(print);
+    algo.generations.last.members
+      .forEach((Phenotype ph) => print("${ph.genesAsString},"));
   });
 }
 
@@ -76,6 +77,8 @@ class GeneticAlgorithm<T extends Phenotype> {
   final int MAX_EXPERIMENTS = 10000;
   final num THRESHOLD_RESULT = 0.01;
   final int MAX_GENERATIONS_IN_MEMORY = 100;
+  
+  final num fitnessSharingRadius = 0.1;
   
   int currentExperiment = 0;
   int currentGeneration = 0;
@@ -101,7 +104,7 @@ class GeneticAlgorithm<T extends Phenotype> {
     evaluateLastGeneration()
     .then((_) {
       print("Applying niching to results.");
-      generations.last.applyNichingToResults();
+      generations.last.applyFitnessSharingToResults(fitnessSharingRadius);
       print("Generation #$currentGeneration evaluation done. Results:");
       num generationCummulative = 0;
       num generationBest = double.INFINITY;
@@ -113,6 +116,7 @@ class GeneticAlgorithm<T extends Phenotype> {
       print("- ${generationCummulative.toStringAsFixed(2)} TOTAL");
       print("- ${generationBest.toStringAsFixed(2)} BEST");
       globalStatusEl.text = """
+GENERATION #$currentGeneration
 TOTAL ${generationCummulative.toStringAsFixed(2)}
 BEST  ${generationBest.toStringAsFixed(2)}
 """;
@@ -179,27 +183,34 @@ class Generation<T extends Phenotype> {
   List<T> members = new List<T>();
   
   /**
-   * Exactly same chromosomes have their [Phenotype.result] score doubled.
+   * Iterates over [members] and raises their fitness score according to
+   * their uniqueness.
+   * 
+   * Algorithm as described in Jeffrey Horn: The Nature of Niching, pp 20-21.
+   * http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.33.8352&rep=rep1&type=pdf
    */
-  static NichingFunction LINEAR_NICHING_FUNCTION = 
-      (num result, num similarity) {
-    return result * (1 + similarity);
-  };
-  
-  static NichingFunction QUADRATIC_NICHING_FUNCTION =
-      (num result, num similarity) {
-    return result * Math.pow(1 + similarity, 2);
-  };
-  
-  void applyNichingToResults([NichingFunction f]) {
-    if (f == null) f = QUADRATIC_NICHING_FUNCTION;
-    
-    // TODO: "fitness sharing"
-    // TODO: radius
-    
+  void applyFitnessSharingToResults(num radius, [num alpha = 1]) {
     members.forEach((T ph) {
-      ph.result = f(ph.result, ph.computeSimilarityWithPool(members));
+      num nicheCount = getSimilarPhenotypes(ph, radius)
+        .map((T other) => ph.computeHammingDistance(other))
+        .fold(0, (num sum, num distance) => 
+            sum + (1 - Math.pow(distance/radius, alpha)));
+      ph.result *= nicheCount;  // Except with raise the result instead of 
+                                // dividing it. (We count 0.0 as perfect 
+                                // fitness.)
     });
+  }
+  
+  /**
+   * Filters the generation to phenotypes that are similar to [ph] as defined
+   * by their Hamming distance being less than [radius].
+   * 
+   * This _includes_ the original [ph] (Because [ph]'s Hamming distance to 
+   * itself is [:0:].)
+   */
+  Iterable<T> getSimilarPhenotypes(T ph, num radius) {
+    return members
+        .where((T candidate) => ph.computeHammingDistance(candidate) < radius);
   }
 }
 
@@ -208,7 +219,7 @@ typedef num NichingFunction(num result, num similarity);
 abstract class GenerationBreeder<T extends Phenotype> {
   num mutationRate = 0.02;  // 0.02 means that every gene has 2% probability of mutating
   num mutationStrength = 1.0;  // 1.0 means any value can become any other value
-  num crossoverPropability = 0.5;  // TODO
+  num crossoverPropability = 1.0;  // TODO
   
   Generation<T> breedNewGeneration(List<Generation> precursors);
   
@@ -370,14 +381,14 @@ abstract class Phenotype<T> {
   String get genesAsString => JSON.encode(genes);
   
   /**
-   * Returns the degree to which this chromosome has similar genes with the
-   * other. If chromosomes are identical, returns [:1.0:]. If all genes are 
-   * different, returns [:0.0:].
+   * Returns the degree to which this chromosome has dissimilar genes with the
+   * other. If chromosomes are identical, returns [:0.0:]. If all genes are 
+   * different, returns [:1.0:].
    * 
    * Genes are considered different when they are not equal. There is no
    * half-different gene (which would make sense for [num] genes, for example).
    */
-  num computeSimilarity(Phenotype<T> other) {
+  num computeHammingDistance(Phenotype<T> other) {
     int length = genes.length;
     int similarCount = 0;
     for (int i = 0; i < genes.length; i++) {
@@ -385,23 +396,7 @@ abstract class Phenotype<T> {
         similarCount++;
       }
     }
-    return similarCount / length;
-  }
-  
-  /**
-   * Takes the pool and returns the 'worst' (maximum) similarity [this] has
-   * with any other member of the [pool].
-   */
-  num computeSimilarityWithPool(List<Phenotype<T>> pool) {
-    num max = 0.0;
-    pool.forEach((Phenotype ph) {
-      if (ph == this) return;
-      num similarity = computeSimilarity(ph);
-      if (similarity > max) {
-        max = similarity;
-      }
-    });
-    return max;
+    return (1 - similarCount / length);
   }
 }
 
@@ -868,7 +863,7 @@ abstract class Demo {
     world = new World(gravity, doSleep, new DefaultWorldPool());
   }
 
-  static int COMPUTATION_TO_SHOW_RATION = 1;
+  static int COMPUTATION_TO_SHOW_RATION = 50;
   
   /** Advances the world forward by timestep seconds. */
   void step(num timestamp, [Function updateCallback]) {
