@@ -79,8 +79,6 @@ class GeneticAlgorithm<T extends Phenotype> {
   final num THRESHOLD_RESULT = 0.01;
   final int MAX_GENERATIONS_IN_MEMORY = 100;
   
-  final num fitnessSharingRadius = 0.1;
-  
   int currentExperiment = 0;
   int currentGeneration = 0;
   
