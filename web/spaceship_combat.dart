@@ -108,12 +108,12 @@ class GeneticAlgorithm<T extends Phenotype> {
       generations.last.members.forEach((T member) {
         print("- ${member.result.toStringAsFixed(2)}");
       });
-      print("- ${generations.last.cummulativeFitness.toStringAsFixed(2)} TOTAL");
+      print("- ${generations.last.averageFitness.toStringAsFixed(2)} AVG");
       print("- ${generations.last.bestFitness.toStringAsFixed(2)} BEST");
       globalStatusEl.text = """
 GENERATION #$currentGeneration
-TOTAL ${generations.last.cummulativeFitness.toStringAsFixed(2)}
-BEST  ${generations.last.bestFitness.toStringAsFixed(2)}
+AVG  ${generations.last.averageFitness.toStringAsFixed(2)}
+BEST ${generations.last.bestFitness.toStringAsFixed(2)}
 """;
       print("---");
       if (currentExperiment >= MAX_EXPERIMENTS) {
@@ -165,6 +165,13 @@ BEST  ${generations.last.bestFitness.toStringAsFixed(2)}
   }
   
   Completer _generationCompleter;
+  
+  /**
+   * Evaluates the latest generation and completes when done.
+   * 
+   * TODO: Allow for multiple members being evaluated in parallel via
+   * isolates.
+   */
   Future evaluateLastGeneration() {
     _generationCompleter = new Completer();
     
@@ -191,6 +198,10 @@ class Generation<T extends Phenotype> {
   }
   
   num cummulativeFitness;
+  num get averageFitness {
+    if (cummulativeFitness == null) return null;
+    return cummulativeFitness / members.length;
+  }
   num bestFitness;
   
   /**
@@ -366,6 +377,7 @@ class SimpleNeuroPilotGenerationBreeder extends GenerationBreeder<NeuroPilotPhen
   }
 }
 
+// TODO: can be implemented as an Isolate
 abstract class PhenotypeEvaluator<T extends Phenotype> {
   PhenotypeEvaluator();
   Completer _completer;
