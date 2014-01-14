@@ -3,19 +3,44 @@
 <html>
   <head>
     <meta charset="utf-8">
-    <title>Spaceship combat</title>
+    <title>Spaceship genetic algorithm</title>
     <link rel="stylesheet" href="spaceship_combat.css">
   </head>
   <body>
     <h1>Spaceship genetic algo</h1>
     
     <div class="floater">
-      <pre id="global-status">GLOBAL STATUS</pre>
-      <pre id="experiment-status">STATUS</pre>
+      <pre id="global-status"></pre>
+      <pre id="experiment-status"></pre>
     </div>
     
     <div id="sample_container_id">
     </div>
+    
+    <p>
+      Speed of simulation: 
+      <button id="speed1x">1x</button>
+      <button id="speed10x">10x</button>
+      <button id="speed100x">100x</button>
+    </p>
+    
+    <p>
+      Face other ship: 
+      <button id="putOnNoseTrain">Train</button>
+      <button id="putOnNoseBest">Best</button>
+    </p>
+    
+    <p>
+      Ram other ship: 
+      <button id="ramTrain">Train</button>
+      <button id="ramBest">Best</button>
+    </p>
+    
+    <p>
+      Run away from ship: 
+      <button id="runAwayTrain">Train</button>
+      <button id="runAwayBest">Best</button>
+    </p>
 
     <script type="application/dart" src="spaceship_combat.dart"></script>
     <script src="packages/browser/dart.js"></script>
