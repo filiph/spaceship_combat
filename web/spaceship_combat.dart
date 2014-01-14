@@ -617,6 +617,41 @@ abstract class ShipBrainMode {
     }
     assert(n == genes.length);
   }
+  
+  /**
+   * Takes a value and [min] and [max], and returns a number that is suitable
+   * for [TanHNeuron] input. (Range from [:-1.0:] to [:1.0:].)
+   * 
+   * Values lower than [min] will be mapped to [:-1.0:], values higher than 
+   * [max] will be mapped to [:1.0:]. Everything between will be mapped
+   * lineary.
+   * 
+   * [min] can also be _higher_ than [max], in which case the function will
+   * inverse. In other words, a [value] of [max] will be converted to [:-1.0:],
+   * etc.
+   */
+  static num valueToNeuralInput(num value, num min, num max) {
+    if (min == max || min == null || max == null) {
+      throw new ArgumentError("The values of min and max must be different "
+          "and not null (function called with $min, $max, respectivelly).");
+    }
+    bool inversed = min > max;
+    
+    if (value <= min) {
+      return inversed ? 1.0 : -1.0;
+    }
+    if (value >= max) {
+      return inversed ? -1.0 : 1.0;
+    }
+    
+    return (value - min) / (max - min) * 2 - 1;
+    // For value=3, min=0, max=10.
+    // (3 - 0) / (10 - 0) * 2 - 1 = 0.3 * 2 - 1 = -0.4
+    // For value=3, min=10, max=0.
+    // (3 - 10) / (0 - 10) * 2 - 1 = (-7) / (-10) * 2 - 1 = 0.7 * 2 - 1 = 0.4
+    // For value=3.5, min=4, max=3.
+    // (3.5 - 4) / (3 - 4) * 2 - 1 = (-0.5) / (-1) * 2 - 1 = 0.5 * 2 - 1 = 0.0
+  }
 }
 
 typedef num IterativeFitnessFunction(AIBox2DShip ship, Box2DShip target,
@@ -654,14 +689,17 @@ class PutOnNoseMode extends ThrusterControllingShipBrainMode {
     if (target == null) throw "Cannot put nose on null target.";
     List<num> inputs = new List(inputNeuronsCount);
     
-    num angVel = ship.body.angularVelocity.clamp(-2, 2); //<-2,2>
-    inputs[0] = (angVel >= 0 ? angVel - 1  : -1);
-    inputs[1] = (angVel <  0 ? -angVel - 1 : -1);
-    inputs[2] = ((ship.getRelativeVectorTo(target).length / 50).clamp(0, 2) - 1);
+    num angVel = ship.body.angularVelocity;
+    inputs[0] = ShipBrainMode.valueToNeuralInput(angVel, 0, 2);
+    inputs[1] = ShipBrainMode.valueToNeuralInput(angVel, 0, -2);
+    inputs[2] = ShipBrainMode.valueToNeuralInput(
+        ship.getRelativeVectorTo(target).length, 0, 50);
     num angle = ship.getAngleTo(target);
-    inputs[3] = (angle >= 0 ? ( angle / Math.PI * 2 - 1) : -1);
-    inputs[4] = (angle <  0 ? (-angle / Math.PI * 2 - 1) : -1);
-    inputs[5] = ((ship.getRelativeVelocityTo(target).length / 5).clamp(0, 2) - 1);
+    inputs[3] = ShipBrainMode.valueToNeuralInput(angle, 0, Math.PI * 2);
+    inputs[4] = ShipBrainMode.valueToNeuralInput(angle, 0, - Math.PI * 2);
+    inputs[5] = ShipBrainMode.valueToNeuralInput(
+        ship.getRelativeVelocityTo(target).length, 0, 5);
+    
     return inputs;
   }
 
@@ -727,14 +765,17 @@ class RunAwayMode extends ThrusterControllingShipBrainMode {
   List<num> getInputs(AIBox2DShip ship, Box2DShip target, ShipCombatSituation s) {
     List<num> inputs = new List<num>(inputNeuronsCount);
     
-    num angVel = ship.body.angularVelocity.clamp(-2, 2); //<-2,2>
-    inputs[0] = (angVel >= 0 ? angVel - 1  : -1);
-    inputs[1] = (angVel <  0 ? -angVel - 1 : -1);
-    inputs[2] = ((ship.getRelativeVectorTo(target).length / 50).clamp(0, 2) - 1);
+    num angVel = ship.body.angularVelocity;
+    inputs[0] = ShipBrainMode.valueToNeuralInput(angVel, 0, 2);
+    inputs[1] = ShipBrainMode.valueToNeuralInput(angVel, 0, -2);
+    inputs[2] = ShipBrainMode.valueToNeuralInput(
+        ship.getRelativeVectorTo(target).length, 0, 50);
     num angle = ship.getAngleTo(target);
-    inputs[3] = (angle >= 0 ? ( angle / Math.PI * 2 - 1) : -1);
-    inputs[4] = (angle <  0 ? (-angle / Math.PI * 2 - 1) : -1);
-    inputs[5] = ((ship.getRelativeVelocityTo(target).length / 5).clamp(0, 2) - 1);
+    inputs[3] = ShipBrainMode.valueToNeuralInput(angle, 0, Math.PI * 2);
+    inputs[4] = ShipBrainMode.valueToNeuralInput(angle, 0, - Math.PI * 2);
+    inputs[5] = ShipBrainMode.valueToNeuralInput(
+        ship.getRelativeVelocityTo(target).length, 0, 5);
+    
     return inputs;
   }
   
