@@ -24,6 +24,8 @@ void main() {
       Demo.COMPUTATION_TO_SHOW_RATION = 10);
   querySelector("#speed100x").onClick.listen((_) => 
       Demo.COMPUTATION_TO_SHOW_RATION = 100);
+  querySelector("#speed1000x").onClick.listen((_) => 
+      Demo.COMPUTATION_TO_SHOW_RATION = 1000);
   
   querySelector("#putOnNoseTrain").onClick.listen((_) => 
       startGeneticAlgorithm(new PutOnNoseMode()));
