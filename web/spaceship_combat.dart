@@ -480,27 +480,30 @@ class RamMode extends ThrusterControllingShipBrainMode {
   num iterativeFitnessFunction(AIBox2DShip ship, Box2DShip target,
                                ShipCombatSituation worldState,
                                [Object userData]) {
+    statusUpdateCounter++;
+    if (statusUpdateCounter == STATUS_UPDATE_FREQ) {
+      var inputs = ship.brainMode.getInputs(ship, target, worldState);
+      experimentStatusEl.text = """ 
+Rammed (${(userData as Map).containsKey("rammed")})
+AnguV (${ship.body.angularVelocity.toStringAsFixed(2)})
+RelV  (${ship.getRelativeVelocityTo(target).length.toStringAsFixed(2)})
+CUMSC = ${worldState.cummulativeScore.toStringAsFixed(2)}
+INPT  = ${inputs.map((num o) => o.toStringAsFixed(2)).join(" ")}
+OUTP  = ${ship.brainMode.brain.use(inputs).map((num o) => o.toStringAsFixed(2)).join(" ")}
+      """;
+      statusUpdateCounter = 0;
+    }
+
     if ((userData as Map).containsKey("rammed")) {
       return 0;
     }
     if (ship.body.contactList != null) {
       (userData as Map)["rammed"] = true;
-      return 0;
+      var score = ship.body.angularVelocity.abs() * 10;  // prefer straight line
+      score += ship.getAngleTo(target).abs() * 100; // prefer head on collision
+      return score;
     }
 
-    statusUpdateCounter++;
-    if (statusUpdateCounter == STATUS_UPDATE_FREQ) {
-      var inputs = ship.brainMode.getInputs(ship, target, worldState);
-      experimentStatusEl.text = """ 
-          Rammed (${(userData as Map).containsKey("rammed")}
-          AnguV (${ship.body.angularVelocity.toStringAsFixed(2)})
-          RelV  (${ship.getRelativeVelocityTo(target).length.toStringAsFixed(2)})
-          CUMSC = ${worldState.cummulativeScore.toStringAsFixed(2)}
-          INPT  = ${inputs.map((num o) => o.toStringAsFixed(2)).join(" ")}
-          OUTP  = ${ship.brainMode.brain.use(inputs).map((num o) => o.toStringAsFixed(2)).join(" ")}
-          """;
-          statusUpdateCounter = 0;
-    }
     return 1;
   }
 }
