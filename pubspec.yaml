@@ -2,11 +2,10 @@ name: spaceship_combat
 description: A sample web application
 author: Filip Hracek <filip.hracek@gmail.com>
 dependencies:
-#  darwin:
-#    git: https://github.com/filiph/darwin
+  darwin: any
   browser: any
   box2d: any
   backy: 0.2.1
 #dev_dependencies:
-  darwin: 
-    path: ../darwin
+#  darwin: 
+#    path: ../darwin
