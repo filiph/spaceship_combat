@@ -417,15 +417,15 @@ class PutOnNoseMode extends ThrusterControllingShipBrainMode {
     if (statusUpdateCounter == STATUS_UPDATE_FREQ) {
       var inputs = ship.brainMode.getInputs(ship, target, worldState);
       experimentStatusEl.text = """ 
-          Angle (${ship.getAngleTo(target).toStringAsFixed(2)}) ${angleScore < 0.5 ? "*": ""}
-          AnguV (${ship.body.angularVelocity.toStringAsFixed(2)})
-          RelV  (${ship.getRelativeVelocityTo(target).length.toStringAsFixed(2)})
-          AbsV  (${absoluteScore.toStringAsFixed(2)})
-          SCORE = ${fitness.toStringAsFixed(2)}
-          CUMSC = ${worldState.cummulativeScore.toStringAsFixed(2)}
-          INPT  = ${inputs.map((num o) => o.toStringAsFixed(2)).join(" ")}
-          OUTP  = ${ship.brainMode.brain.use(inputs).map((num o) => o.toStringAsFixed(2)).join(" ")}
-          """;
+Angle (${ship.getAngleTo(target).toStringAsFixed(2)}) ${angleScore < 0.5 ? "*": ""}
+AnguV (${ship.body.angularVelocity.toStringAsFixed(2)})
+RelV  (${ship.getRelativeVelocityTo(target).length.toStringAsFixed(2)})
+AbsV  (${absoluteScore.toStringAsFixed(2)})
+SCORE = ${fitness.toStringAsFixed(2)}
+CUMSC = ${worldState.cummulativeScore.toStringAsFixed(2)}
+INPT  = ${inputs.map((num o) => o.toStringAsFixed(2)).join(" ")}
+OUTP  = ${ship.brainMode.brain.use(inputs).map((num o) => o.toStringAsFixed(2)).join(" ")}
+""";
           statusUpdateCounter = 0;
     }
     return fitness; 
