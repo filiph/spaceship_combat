@@ -12,18 +12,9 @@ h1, p {
   color: #333;
 }
 
-#sample_container_id {
-  width: 100%;
-  height: 0;
-  position: relative;
-  border: 1px solid #ccc;
-  background-color: #fff;
-}
-
-#sample_text_id {
-  font-size: 24pt;
-  text-align: center;
-  margin-top: 140px;
+.left-overlay {
+  float: left;
+  width: 50%
 }
 
 .floater {
