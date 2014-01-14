@@ -27,14 +27,14 @@ void main() {
   
   querySelector("#putOnNoseTrain").onClick.listen((_) => 
       startGeneticAlgorithm(new PutOnNoseMode()));
-//  querySelector("#putOnNoseTrain").onClick.listen((_) => 
-//      startGeneticAlgorithm(new PutOnNoseMode()));
+  querySelector("#ramTrain").onClick.listen((_) => 
+      startGeneticAlgorithm(new RamMode()));
   querySelector("#runAwayTrain").onClick.listen((_) => 
       startGeneticAlgorithm(new RunAwayMode()));
   
   querySelector("#putOnNoseBest").onClick.listen((_) => 
       loopBestPhenotype(new PutOnNoseMode()));
-//  querySelector("#runAwayBest").onClick.listen((_) => 
+//  querySelector("#ramBest").onClick.listen((_) => 
 //      loopBestPhenotype(new RunAwayMode()));
   querySelector("#runAwayBest").onClick.listen((_) => 
       loopBestPhenotype(new RunAwayMode()));
@@ -427,6 +427,79 @@ class PutOnNoseMode extends ThrusterControllingShipBrainMode {
           statusUpdateCounter = 0;
     }
     return fitness; 
+  }
+}
+
+class RamMode extends ThrusterControllingShipBrainMode {
+  RamMode() : super();
+  
+//  var _bestPhenotypeGenes = [1,0.9018464279413057,-1,-1,-1,1,-1,0.4136984574781215,-1,1,-0.742579672323123,-0.1908317505750039,0.5574536073173719,-1,-0.5296056136247094,1,0.3080163790918309,-0.022654338670871743,-0.3029914580544195,-0.7269177099906681,0.66321054623383,-0.9528884710051799,0.9312112351519395,-0.3138999404790046,0.5662556386739184,-0.07198920052360114,-1,-1,1,0.5800448338026072,0.469708722442443,1,1,-1,-0.5362791814941343,-0.40971072656896323,1,-0.08507525764205126,0.5048425278209785,0.19752286324384793,-0.22698805827085566,0.5740932416289573,0.6496256559898081,-1,0.037887718857197994,0.7869484594487615,-0.029936157128147345,0.28259970204508034,-0.33842683170428467,-1,1,0.19198573035876998,-0.1641794051381047,-0.207066541945774,0.5646929924520327,1,1,-1,0.09965951411735019,-0.012063975706213315,0.4224939056320067,0.026021830040641403,-0.43483123157928105,-0.9760319991964792,0.8348596923808211,0.20873481336001976,1,0.7556703921722707,-1,-1,-1,0.5128700532702966,-0.3409815693678979,-1,-0.1527288170577148,1,0.16677463033387863,-1];
+  
+  int inputNeuronsCount = 6;
+  
+  List<num> getInputs(AIBox2DShip ship, Box2DShip target, ShipCombatSituation s) {
+    if (target == null) throw "Cannot put nose on null target.";
+    List<num> inputs = new List(inputNeuronsCount);
+    
+    num angVel = ship.body.angularVelocity;
+    inputs[0] = ShipBrainMode.valueToNeuralInput(angVel, 0, 2);
+    inputs[1] = ShipBrainMode.valueToNeuralInput(angVel, 0, -2);
+    inputs[2] = ShipBrainMode.valueToNeuralInput(
+        ship.getRelativeVectorTo(target).length, 0, 50);
+    num angle = ship.getAngleTo(target);
+    inputs[3] = ShipBrainMode.valueToNeuralInput(angle, 0, Math.PI * 2);
+    inputs[4] = ShipBrainMode.valueToNeuralInput(angle, 0, - Math.PI * 2);
+    inputs[5] = ShipBrainMode.valueToNeuralInput(
+        ship.getRelativeVelocityTo(target).length, 0, 5);
+    
+    return inputs;
+  }
+  
+  List<SetupFunction> setupFunctions = [
+    (ShipCombatSituation s) {
+      print("- to the left");
+      s.ship.body.setTransform(new Vector2(0.0, 0.0), Math.PI / 4);
+    },
+    (ShipCombatSituation s) {
+      print("- to the right");
+      s.ship.body.setTransform(new Vector2(0.0, 0.0), 3 * Math.PI / 4);
+    },
+    (ShipCombatSituation s) {
+      print("- back with impulse");
+      s.ship.body.setTransform(new Vector2(0.0, 0.0), - Math.PI / 2);
+      s.ship.body.applyLinearImpulse(new Vector2(2.0, 0.0), new Vector2(0.0, -1.0));
+    },
+    (ShipCombatSituation s) {
+      print("- back slightly off");
+      s.ship.body.setTransform(new Vector2(0.0, 0.0), - Math.PI / 2 + 0.1);
+    }
+                                        ];
+  
+  num iterativeFitnessFunction(AIBox2DShip ship, Box2DShip target,
+                               ShipCombatSituation worldState,
+                               [Object userData]) {
+    if ((userData as Map).containsKey("rammed")) {
+      return 0;
+    }
+    if (ship.body.contactList != null) {
+      (userData as Map)["rammed"] = true;
+      return 0;
+    }
+
+    statusUpdateCounter++;
+    if (statusUpdateCounter == STATUS_UPDATE_FREQ) {
+      var inputs = ship.brainMode.getInputs(ship, target, worldState);
+      experimentStatusEl.text = """ 
+          Rammed (${(userData as Map).containsKey("rammed")}
+          AnguV (${ship.body.angularVelocity.toStringAsFixed(2)})
+          RelV  (${ship.getRelativeVelocityTo(target).length.toStringAsFixed(2)})
+          CUMSC = ${worldState.cummulativeScore.toStringAsFixed(2)}
+          INPT  = ${inputs.map((num o) => o.toStringAsFixed(2)).join(" ")}
+          OUTP  = ${ship.brainMode.brain.use(inputs).map((num o) => o.toStringAsFixed(2)).join(" ")}
+          """;
+          statusUpdateCounter = 0;
+    }
+    return 1;
   }
 }
 
