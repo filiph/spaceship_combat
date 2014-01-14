@@ -13,7 +13,7 @@ int statusUpdateCounter = 0;
 
 void main() {
   
-  ShipBrainMode modeToTest = new PutOnNoseMode();
+  ShipBrainMode modeToTest = new RunAwayMode();
   int firstGenerationSize = 20;
   
   experimentStatusEl = querySelector("#experiment-status");
@@ -48,7 +48,7 @@ void main() {
   
   var breeder = new SimpleNeuroPilotGenerationBreeder()
     ..crossoverPropability = 0.8;
-  var evaluator = new NeuroPilotSerialEvaluator(new PutOnNoseMode());
+  var evaluator = new NeuroPilotSerialEvaluator(modeToTest);
   
   if (chromosomesList == null) {
     AIBox2DShip tempShip = evaluator._createBodega(new ShipCombatSituation());
@@ -557,7 +557,6 @@ abstract class ShipBrainMode {
   
   void initializeBrain(AIBox2DShip ship) {
     neuron.bias = 1;
-    inputNeuronsCount = getInputs(ship, ship.target, ship.situation).length;
     outputNeuronsCount = ship.thrusters.length;
     brain = new Backy([inputNeuronsCount, 
                        // 'The optimal size of the hidden layer is usually 
@@ -569,7 +568,7 @@ abstract class ShipBrainMode {
   
   Backy brain;
   
-  int inputNeuronsCount;
+  int get inputNeuronsCount;
   int outputNeuronsCount;
   
   List<SetupFunction> get setupFunctions;
@@ -647,9 +646,9 @@ abstract class ThrusterControllingShipBrainMode extends ShipBrainMode {
 
 class PutOnNoseMode extends ThrusterControllingShipBrainMode {
   PutOnNoseMode() : super();
+  // [1,0.9018464279413057,-1,-1,-1,1,-1,0.4136984574781215,-1,1,-0.742579672323123,-0.1908317505750039,0.5574536073173719,-1,-0.5296056136247094,1,0.3080163790918309,-0.022654338670871743,-0.3029914580544195,-0.7269177099906681,0.66321054623383,-0.9528884710051799,0.9312112351519395,-0.3138999404790046,0.5662556386739184,-0.07198920052360114,-1,-1,1,0.5800448338026072,0.469708722442443,1,1,-1,-0.5362791814941343,-0.40971072656896323,1,-0.08507525764205126,0.5048425278209785,0.19752286324384793,-0.22698805827085566,0.5740932416289573,0.6496256559898081,-1,0.037887718857197994,0.7869484594487615,-0.029936157128147345,0.28259970204508034,-0.33842683170428467,-1,1,0.19198573035876998,-0.1641794051381047,-0.207066541945774,0.5646929924520327,1,1,-1,0.09965951411735019,-0.012063975706213315,0.4224939056320067,0.026021830040641403,-0.43483123157928105,-0.9760319991964792,0.8348596923808211,0.20873481336001976,1,0.7556703921722707,-1,-1,-1,0.5128700532702966,-0.3409815693678979,-1,-0.1527288170577148,1,0.16677463033387863,-1]
 
   int inputNeuronsCount = 6;
-  int outputNeuronsCount;
   
   List<num> getInputs(AIBox2DShip ship, Box2DShip target, ShipCombatSituation s) {
     if (target == null) throw "Cannot put nose on null target.";
@@ -721,28 +720,70 @@ class PutOnNoseMode extends ThrusterControllingShipBrainMode {
   }
 }
 
+class RunAwayMode extends ThrusterControllingShipBrainMode {
+  
+  int inputNeuronsCount = 3;
+  
+  List<num> getInputs(AIBox2DShip ship, Box2DShip target, ShipCombatSituation s) {
+    List<num> inputs = new List<num>(inputNeuronsCount);
+    inputs[0] = ship.getRelativeVelocityTo(target).length;
+    inputs[1] = ship.getAngleTo(target);
+    inputs[2] = ship.body.angularVelocity;
+    return inputs;
+  }
+  
+  List<SetupFunction> setupFunctions = [
+      (ShipCombatSituation s) {
+        print("- to the left");
+        s.ship.body.setTransform(new Vector2(0.0, 0.0), Math.PI / 4);
+      },
+      (ShipCombatSituation s) {
+        print("- to the right");
+        s.ship.body.setTransform(new Vector2(0.0, 0.0), 3 * Math.PI / 4);
+      },
+      (ShipCombatSituation s) {
+        print("- back with impulse");
+        s.ship.body.setTransform(new Vector2(0.0, 0.0), - Math.PI / 2);
+        s.ship.body.applyLinearImpulse(new Vector2(2.0, 0.0), new Vector2(0.0, -1.0));
+      },
+      (ShipCombatSituation s) {
+        print("- front with impulse");
+        s.ship.body.setTransform(new Vector2(0.0, 0.0), Math.PI / 2);
+        s.ship.body.applyLinearImpulse(new Vector2(0.0, 2.0), new Vector2(0.0, -1.0));
+      }
+  ];
+
+  num iterativeFitnessFunction(AIBox2DShip ship, Box2DShip target, ShipCombatSituation s, [Object userData]) {
+    num velocityScore = 1 / (ship.getRelativeVelocityTo(target).length + 1);
+    num proximityScore = 1 / Math.pow((ship.getRelativeVectorTo(target).length + 1) / 100, 2);  // 1 / (x/100)^2
+    num angleScore = Math.PI - ship.getAngleTo(target).abs();
+    
+    num fitness = velocityScore + proximityScore + angleScore;
+    
+    statusUpdateCounter++;
+    if (statusUpdateCounter == STATUS_UPDATE_FREQ) {
+      var inputs = ship.brainMode.getInputs(ship, ship.target, ship.situation);
+      experimentStatusEl.text = """ 
+Velo (${velocityScore.toStringAsFixed(2)})
+Prox (${proximityScore.toStringAsFixed(2)})
+Angl (${angleScore.toStringAsFixed(2)}) ${angleScore < 0.5 ? "*" : ""}
+SCORE = ${fitness.toStringAsFixed(2)}
+CUMSC = ${s.cummulativeScore.toStringAsFixed(2)}
+INPT  = ${inputs.map((num o) => o.toStringAsFixed(2)).join(" ")}
+OUTP  = ${ship.brainMode.brain.use(inputs).map((num o) => o.toStringAsFixed(2)).join(" ")}
+      """;
+      statusUpdateCounter = 0;
+    }
+    
+    return fitness;
+  }
+
+}
 
 //num runAwayFitnessFunction(NeuroPilotPhenotype phenotype, 
 //                             ShipCombatSituation s, 
 //                             [Object userData]) {
-//  num velocityScore = 1 / (s.bodega.relativeVelocityToTarget.length + 1);
-//  num proximityScore = 1 / Math.pow((s.bodega.relativeVectorToTarget.length + 1) / 100, 2);  // 1 / (x/100)^2
-//  
-//  num fitness = velocityScore + proximityScore;
-//  
-//  statusUpdateCounter++;
-//  if (statusUpdateCounter == STATUS_UPDATE_FREQ) {
-//    var inputs = s.bodega.getInputs();
-//    experimentStatusEl.text = """ 
-//Velo (${velocityScore.toStringAsFixed(2)})
-//Prox (${proximityScore.toStringAsFixed(2)})
-//SCORE = ${fitness.toStringAsFixed(2)}
-//CUMSC = ${s.cummulativeScore.toStringAsFixed(2)}
-//INPT  = ${inputs.map((num o) => o.toStringAsFixed(2)).join(" ")}
-//OUTP  = ${s.bodega.brain.use(inputs).map((num o) => o.toStringAsFixed(2)).join(" ")}
-//""";
-//    statusUpdateCounter = 0;
-//  }
+
 //}
 
 class ShipCombatSituation extends Demo {
@@ -801,6 +842,7 @@ class ShipCombatSituation extends Demo {
     }
     if (fitnessFunction != null) {
       num score = fitnessFunction(ship, ship.target, this, userData);
+      if (score == null) throw "Fitness function returned a null value.";
       if (score.isInfinite) {
         cummulativeScore = double.INFINITY;
         _completer.complete(this);
