@@ -126,13 +126,15 @@ abstract class ShipBrainMode {
    */
   num iterativeFitnessFunction(AIBox2DShip ship, Box2DShip target,
                                ShipCombatSituation worldState, 
-                               [Object userData]);
+                               Object userData);
   
   /**
    * Generates input for given [ship] and its [target] in a given situation [s].
    * This is feeded to the [brain]'s neural network.
+   * [userData] can be used to store information between runs of the function.
    */
-  List<num> getInputs(AIBox2DShip ship, Box2DShip target, ShipCombatSituation s);
+  List<num> getInputs(AIBox2DShip ship, Box2DShip target, ShipCombatSituation s,
+      Object userData);
   
   /**
    * Takes control of the ship. 
@@ -140,7 +142,8 @@ abstract class ShipBrainMode {
    * Applies the results of the neural network by sending commands to different
    * systems of the ship, according to current situation.
    */
-  void control(AIBox2DShip ship, Box2DShip target, ShipCombatSituation s);
+  void control(AIBox2DShip ship, Box2DShip target, ShipCombatSituation s,
+               Object userData);
   
   void setBrainFromPhenotype(NeuroPilotPhenotype phenotype) {
     List<num> genes = phenotype.genes;
@@ -194,7 +197,7 @@ abstract class ShipBrainMode {
 
 typedef num IterativeFitnessFunction(AIBox2DShip ship, Box2DShip target,
                                      ShipCombatSituation worldState, 
-                                     [Object userData]);
+                                     Object userData);
 
 /**
  * Only controls thrusters.
@@ -207,8 +210,9 @@ abstract class ThrusterControllingShipBrainMode extends ShipBrainMode {
   /**
    * Takes control of the thrusters only.
    */
-  void control(AIBox2DShip ship, Box2DShip target, ShipCombatSituation s) {
-    List<num> outputs = brain.use(getInputs(ship, target, s));
+  void control(AIBox2DShip ship, Box2DShip target, ShipCombatSituation s,
+               Object userData) {
+    List<num> outputs = brain.use(getInputs(ship, target, s, userData));
     assert(outputs.length == ship.thrusters.length);
     for (int i = 0; i < ship.thrusters.length; i++) {
       num force = ((outputs[i] + 1) / 2).clamp(0, 1);  // from <-1,1> to <0,1>
@@ -228,7 +232,8 @@ class PutOnNoseMode extends ThrusterControllingShipBrainMode {
 
   int inputNeuronsCount = 6;
   
-  List<num> getInputs(AIBox2DShip ship, Box2DShip target, ShipCombatSituation s) {
+  List<num> getInputs(AIBox2DShip ship, Box2DShip target, ShipCombatSituation s,
+      [Object userData]) {
     if (target == null) throw "Cannot put nose on null target.";
     List<num> inputs = new List(inputNeuronsCount);
     
@@ -268,7 +273,7 @@ class PutOnNoseMode extends ThrusterControllingShipBrainMode {
   
   num iterativeFitnessFunction(AIBox2DShip ship, Box2DShip target,
                                ShipCombatSituation worldState,
-                               [Object userData]) {
+                               Object userData) {
     num angleScore = ship.getAngleTo(target).abs();
     num angularScore = ship.body.angularVelocity.abs();
     num relativeScore = ship.getRelativeVelocityTo(target).length;
@@ -284,7 +289,7 @@ class PutOnNoseMode extends ThrusterControllingShipBrainMode {
     
     statusUpdateCounter++;
     if (statusUpdateCounter == STATUS_UPDATE_FREQ) {
-      var inputs = ship.brainMode.getInputs(ship, target, worldState);
+      var inputs = ship.brainMode.getInputs(ship, target, worldState, userData);
       experimentStatusEl.text = """ 
 Angle (${ship.getAngleTo(target).toStringAsFixed(2)}) ${angleScore < 0.5 ? "*": ""}
 AnguV (${ship.body.angularVelocity.toStringAsFixed(2)})
@@ -308,7 +313,8 @@ class RamMode extends ThrusterControllingShipBrainMode {
   
   int inputNeuronsCount = 6;
   
-  List<num> getInputs(AIBox2DShip ship, Box2DShip target, ShipCombatSituation s) {
+  List<num> getInputs(AIBox2DShip ship, Box2DShip target, ShipCombatSituation s,
+      [Object userData]) {
     if (target == null) throw "Cannot put nose on null target.";
     List<num> inputs = new List(inputNeuronsCount);
     
@@ -348,10 +354,10 @@ class RamMode extends ThrusterControllingShipBrainMode {
   
   num iterativeFitnessFunction(AIBox2DShip ship, Box2DShip target,
                                ShipCombatSituation worldState,
-                               [Object userData]) {
+                               Object userData) {
     statusUpdateCounter++;
     if (statusUpdateCounter == STATUS_UPDATE_FREQ) {
-      var inputs = ship.brainMode.getInputs(ship, target, worldState);
+      var inputs = ship.brainMode.getInputs(ship, target, worldState, userData);
       experimentStatusEl.text = """ 
 Rammed (${(userData as Map).containsKey("rammed")})
 AnguV (${ship.body.angularVelocity.toStringAsFixed(2)})
@@ -382,7 +388,8 @@ class RunAwayMode extends ThrusterControllingShipBrainMode {
 
   var _bestPhenotypeGenes = [-0.6365017683440641,0.4948233947431637,1,-0.2978041998465111,0.5483557848811249,1,-0.19950995684959594,1,0.9923508371172551,1,0.9703486932827083,0.19704397368841464,0.002260979724461043,0.3799558162277141,1,0.7271738352987316,0.7172617632258849,1,0.2447342310336107,0.14486030445194675,1,-0.08680643368129926,0.28621850573394125,1,1,0.1948468255674236,-0.8618221997472579,-0.5689250971144446,-1,-1,-0.47475301049804663,-1,1,-0.9832649592586187,0.6625999444242254,0.0859548534401322,-0.05183690796488194,1,1,0.9369797133734912,-0.767108902956245,1,0.9834216394806794,1,1,0.5364263388053601,-1,1,-1,-1,-1,-1,-0.7950962936618986,-1,-0.8630781760686892,0.25925360062598557,0.30956986037094847,0.11676731605244162,0.23965856944367991,0.7808912500169252,-1,-1,-0.017289719774240098,0.1845985460885149,1,-1,0.42786145626845595,1,0.8102764068936965,0.6286269633226826,0.7675326785926218,1,-0.3381967560812773,-1,-1,-1,-1,-1];
   
-  List<num> getInputs(AIBox2DShip ship, Box2DShip target, ShipCombatSituation s) {
+  List<num> getInputs(AIBox2DShip ship, Box2DShip target, ShipCombatSituation s,
+      [Object userData]) {
     List<num> inputs = new List<num>(inputNeuronsCount);
     
     num angVel = ship.body.angularVelocity;
@@ -420,7 +427,8 @@ class RunAwayMode extends ThrusterControllingShipBrainMode {
       }
   ];
 
-  num iterativeFitnessFunction(AIBox2DShip ship, Box2DShip target, ShipCombatSituation s, [Object userData]) {
+  num iterativeFitnessFunction(AIBox2DShip ship, Box2DShip target, 
+                               ShipCombatSituation s, Object userData) {
     num velocityScore = 1 / (ship.getRelativeVelocityTo(target).length + 1);
     num proximityScore = 1 / Math.pow((ship.getRelativeVectorTo(target).length + 1) / 100, 2);  // 1 / (x/100)^2
     num angleScore = Math.PI - ship.getAngleTo(target).abs();
@@ -429,7 +437,8 @@ class RunAwayMode extends ThrusterControllingShipBrainMode {
     
     statusUpdateCounter++;
     if (statusUpdateCounter == STATUS_UPDATE_FREQ) {
-      var inputs = ship.brainMode.getInputs(ship, ship.target, ship.situation);
+      var inputs = ship.brainMode.getInputs(ship, ship.target, ship.situation,
+          userData);
       experimentStatusEl.text = """ 
 Velo (${velocityScore.toStringAsFixed(2)})
 Prox (${proximityScore.toStringAsFixed(2)})
@@ -600,10 +609,11 @@ class AIBox2DShip extends Box2DShip {
    * If [:null:], the ship is in manual mode.
    */
   ShipBrainMode brainMode;
+  Map userData = {};
   
   void applyBrain() {
     if (brainMode != null) {
-      brainMode.control(this, target, situation);
+      brainMode.control(this, target, situation, userData);
     }
   }
 }
