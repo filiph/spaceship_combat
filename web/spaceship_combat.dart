@@ -36,6 +36,8 @@ void main() {
       startGeneticAlgorithm(new RamMode()));
   querySelector("#runAwayTrain").onClick.listen((_) => 
       startGeneticAlgorithm(new RunAwayMode()));
+  querySelector("#dockLeftTrain").onClick.listen((_) => 
+      startGeneticAlgorithm(new DockLeftMode()));
   
   querySelector("#putOnNoseBest").onClick.listen((_) => 
       loopBestPhenotype(new PutOnNoseMode()));
