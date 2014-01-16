@@ -45,6 +45,8 @@ void main() {
       loopBestPhenotype(new RamMode()));
   querySelector("#runAwayBest").onClick.listen((_) => 
       loopBestPhenotype(new RunAwayMode()));
+  querySelector("#dockLeftBest").onClick.listen((_) => 
+      loopBestPhenotype(new DockLeftMode()));
   
   startGeneticAlgorithm(new PutOnNoseMode());
 }
