@@ -54,7 +54,8 @@ class NeuroPilotSerialEvaluator extends PhenotypeSerialEvaluator<NeuroPilotPheno
       return new Future.value(null);
     }
     ShipCombatSituation s = new ShipCombatSituation(
-        fitnessFunction: brainMode.iterativeFitnessFunction);
+        fitnessFunction: brainMode.iterativeFitnessFunction,
+        maxTimeToRun: brainMode.timeToEvaluate);
     currentSituation = s;
     var bodega = _createBodega(s);
     var messenger = _createMessenger(s);
@@ -127,6 +128,12 @@ abstract class ShipBrainMode {
   num iterativeFitnessFunction(AIBox2DShip ship, Box2DShip target,
                                ShipCombatSituation worldState, 
                                Object userData);
+  
+  /**
+   * Number of simulation steps to evaluate. This should be enough for this
+   * brain to do its thing and stay at the needed position.
+   */
+  int timeToEvaluate = 1000;
   
   /**
    * Generates input for given [ship] and its [target] in a given situation [s].
@@ -481,16 +488,12 @@ class DockLeftMode extends ThrusterControllingShipBrainMode {
                                ShipCombatSituation s, Object userData) {
     num velocityScore = ship.getRelativeVelocityTo(target).length;
     num proximityScore = ship.getRelativeVectorTo(target).length;
-    num angleScore;
     num angle = ship.getAngleTo(target);
-    if (angle > 0) {
-      angleScore = 5;
-    } else {
-      angleScore = (-angle - Math.PI / 2).abs();
-    }
+    num wantedAngle = - Math.PI / 2;
+    num angleScore = (angle - wantedAngle).abs();
     num angVel = ship.body.angularVelocity.abs();
     
-    num fitness = velocityScore + proximityScore + angleScore + angVel;
+    num fitness = velocityScore + 5 * proximityScore + 5 * angleScore + angVel;
     
     statusUpdateCounter++;
     if (statusUpdateCounter == STATUS_UPDATE_FREQ) {
@@ -518,12 +521,14 @@ OUTP  = ${ship.brainMode.brain.use(inputs).map((num o) => o.toStringAsFixed(2)).
     
     return fitness;
   }
+  
+  int timeToEvaluate = 2000;
 }
 
 class ShipCombatSituation extends Demo {
   /** Constructs a new BoxTest. */
   ShipCombatSituation({this.fitnessFunction, this.maxTimeToRun: 1000}) 
-      : super("Box test", new Vector2(0.0, 0.0)) {
+      : super("Box test", simEl, new Vector2(0.0, 0.0)) {
     assert (world != null);
   }
   

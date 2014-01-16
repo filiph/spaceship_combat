@@ -14,12 +14,16 @@ part "shipbrain.dart";
 
 PreElement experimentStatusEl;
 PreElement globalStatusEl;
+DivElement simEl;
+PreElement resultsEl;
 
 ShipCombatSituation currentSituation;
 
 void main() {
   experimentStatusEl = querySelector("#experiment-status");
   globalStatusEl = querySelector("#global-status");
+  simEl = querySelector("#sim");
+  resultsEl = querySelector("#results");
   
   querySelector("#speed1x").onClick.listen((_) => 
       Demo.computationToShowRatio = 1);
@@ -66,7 +70,8 @@ void loopBestPhenotype(ShipBrainMode modeToTest, [int i = 0]) {
   }
   
   ShipCombatSituation s = new ShipCombatSituation(
-      fitnessFunction: modeToTest.iterativeFitnessFunction);
+      fitnessFunction: modeToTest.iterativeFitnessFunction,
+      maxTimeToRun: modeToTest.timeToEvaluate);
   currentSituation = s;
   var bodega = NeuroPilotSerialEvaluator._createBodega(s);
   var messenger = NeuroPilotSerialEvaluator._createMessenger(s);
@@ -90,10 +95,12 @@ void loopBestPhenotype(ShipBrainMode modeToTest, [int i = 0]) {
 void startGeneticAlgorithm(ShipBrainMode modeToTest) {
   if (currentSituation != null) currentSituation.destroy();
   
+  globalStatusEl.text = "Evolving $modeToTest";
+  
   int firstGenerationSize = 20;
   var firstGeneration = new Generation<NeuroPilotPhenotype>();
   
-  List chromosomesList;
+  List chromosomesList;  // For continuing an evolution process.
   
 //chromosomesList = [
 //[0.656042246016904,-1,-0.24081318444856392,0.5744812279030207,0.2294102058580787,1,0.3035244461389026,-1,-1,0.9788210371967068,-1,-0.30394320371064953,0.541511346181798,-0.4919182529775268,0.06441859930483651,1,-0.8866056556621515,-0.1523101906619717,1,-0.5333387891790473,-1,0.2114781396876071,-1,0.47062753360648335,0.37469768444830565,-1,-1,0.7553430133047478,-1,0.8036223092026535,0.46107153121756195,0.5584411618106389,0.5880153611491499,-1,1,0.7246010776546117,0.6380770183191189,1,1,1,0.8834377090394323,-1,0.9034351422933586,1,0.7532839617435458,1,0.9569661327238526,-1,-1,-1,-1,-1,-1,-0.13176506082818373,0.45506549060346924,-0.039621954389641445,-0.4293651779480425,-0.6297581134691022,0.005330164394882431,1,-0.3925779880446416,-0.8135402410935644,0.5133826377775486,-1,-0.7147878509754113,-1,0.08415824234521363,1,0.7789551787282964,1,-1,1,-1,-1,-1,-1,0.6940740089925037,-0.8860931172536737],
@@ -140,8 +147,14 @@ void startGeneticAlgorithm(ShipBrainMode modeToTest) {
     });
   }
   
-  var algo = new GeneticAlgorithm(firstGeneration, evaluator, breeder,
+  GeneticAlgorithm<NeuroPilotPhenotype> algo = new GeneticAlgorithm(firstGeneration, evaluator, breeder,
       statusf: (status) => globalStatusEl.text = status.toString());
+  algo.onGenerationEvaluated.listen((Generation<NeuroPilotPhenotype> g) {
+    resultsEl.text = g.members.first.genesAsString;
+    if (modeToTest._bestPhenotypeGenes == null) {
+      modeToTest._bestPhenotypeGenes = g.members.first.genes;
+    }
+  });
   algo.runUntilDone()
   .then((_) {
     algo.generations.last.members

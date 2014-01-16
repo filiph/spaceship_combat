@@ -61,12 +61,15 @@ abstract class Demo {
   // every frame to minimize overhead.
   Stopwatch _stopwatch;
 
-  Demo(String name, [Vector2 gravity, this.viewportScale = _VIEWPORT_SCALE]) {
+  Demo(String name, this.canvasContainerEl, 
+      [Vector2 gravity, this.viewportScale = _VIEWPORT_SCALE]) {
 //    _stopwatch = new Stopwatch()..start();
     bool doSleep = true;
     if (null == gravity) gravity = new Vector2(0.0, GRAVITY);
     world = new World(gravity, doSleep, new DefaultWorldPool());
   }
+  
+  final Element canvasContainerEl;
 
   static int computationToShowRatio = 1;
   
@@ -125,7 +128,7 @@ abstract class Demo {
     canvas = new Element.tag('canvas');
     canvas.width = CANVAS_WIDTH;
     canvas.height = CANVAS_HEIGHT;
-    document.body.nodes.add(canvas);
+    canvasContainerEl.nodes.add(canvas);
     ctx = canvas.getContext("2d");
 
     // Create the viewport transform with the center at extents.
