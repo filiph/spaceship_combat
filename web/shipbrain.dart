@@ -486,11 +486,11 @@ class DockLeftMode extends ThrusterControllingShipBrainMode {
     if (angle > 0) {
       angleScore = 5;
     } else {
-      angleScore = (angle - Math.PI / 2).abs();
+      angleScore = (-angle - Math.PI / 2).abs();
     }
     num angVel = ship.body.angularVelocity.abs();
     
-    num fitness = 10 * velocityScore + proximityScore + angleScore + angVel;
+    num fitness = velocityScore + proximityScore + angleScore + angVel;
     
     statusUpdateCounter++;
     if (statusUpdateCounter == STATUS_UPDATE_FREQ) {
