@@ -74,8 +74,10 @@ abstract class Demo {
   void step(num timestamp, [Function updateCallback]) {
     if (destroyed) return;
     
-    // Clear the animation panel and draw new frame.
-    ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    if (computationToShowRatio <= 10) {
+      // Clear the animation panel
+      ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    }
     
     bool shouldContinue = true;
     for (int i = 0; i < computationToShowRatio; i++) {
@@ -88,7 +90,13 @@ abstract class Demo {
         }
       }
     }
+    
+    if (computationToShowRatio > 10) {
+      // Clear the animation panel
+      ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    }
 
+    // Draw debug data
     world.drawDebugData();
 
     if (shouldContinue) {
