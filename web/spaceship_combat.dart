@@ -35,7 +35,7 @@ void main() {
       Demo.computationToShowRatio = 1000);
   
   querySelector("#putOnNoseTrain").onClick.listen((_) => 
-      startGeneticAlgorithm(new PutOnNoseMode()));
+      startGeneticAlgorithm(new FaceOtherShipMode()));
   querySelector("#ramTrain").onClick.listen((_) => 
       startGeneticAlgorithm(new RamMode()));
   querySelector("#runAwayTrain").onClick.listen((_) => 
@@ -44,7 +44,7 @@ void main() {
       startGeneticAlgorithm(new DockLeftMode()));
   
   querySelector("#putOnNoseBest").onClick.listen((_) => 
-      loopBestPhenotype(new PutOnNoseMode()));
+      loopBestPhenotype(new FaceOtherShipMode()));
   querySelector("#ramBest").onClick.listen((_) => 
       loopBestPhenotype(new RamMode()));
   querySelector("#runAwayBest").onClick.listen((_) => 
@@ -52,7 +52,7 @@ void main() {
   querySelector("#dockLeftBest").onClick.listen((_) => 
       loopBestPhenotype(new DockLeftMode()));
   
-  startGeneticAlgorithm(new PutOnNoseMode());
+  startGeneticAlgorithm(new FaceOtherShipMode());
 }
 
 /**
