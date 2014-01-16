@@ -38,10 +38,10 @@ class NeuroPilotSerialEvaluator extends PhenotypeSerialEvaluator<NeuroPilotPheno
           thrusters: [new Thruster(-1.5, -0.5, 1, 0),  // Main thrusters
                       new Thruster(-1.5,  0.5, 1, 0),
                       new Thruster( 1.5,    0, -0.5, 0), // Retarder
-                      new Thruster(-1.5, -0.5, 0, 0.2), // Back maneuverability
-                      new Thruster(-1.5,  0.5, 0, -0.2),
-                      new Thruster( 1.5, -0.5, 0, 0.2),  // Front maneuverability
-                      new Thruster( 1.5,  0.5, 0, -0.2)]);
+                      new Thruster(-1.5, -0.5, 0, -0.2), // Back maneuverability
+                      new Thruster(-1.5,  0.5, 0, 0.2),
+                      new Thruster( 1.5, -0.5, 0, -0.2),  // Front maneuverability
+                      new Thruster( 1.5,  0.5, 0, 0.2)]);
   }
   
   static Box2DShip _createMessenger(ShipCombatSituation s) {
@@ -631,6 +631,10 @@ class Box2DShip {
     Matrix2 rotm = new Matrix2.rotation(-body.angle);
     body.applyForce(thruster.maxForce.scaled(relativeForce.toDouble()).postmultiply(rotm), 
         body.getWorldPoint(thruster.localPosition));
+    
+    situation.debugDraw.drawSolidCircle(body.getWorldPoint(thruster.localPosition), 
+        thruster.maxForce.length * relativeForce * 1, 
+        new Color3.fromRGB(250, 0, 0));
   }
   
   static final Vector2 ORIGIN = new Vector2.zero();

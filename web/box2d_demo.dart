@@ -74,6 +74,9 @@ abstract class Demo {
   void step(num timestamp, [Function updateCallback]) {
     if (destroyed) return;
     
+    // Clear the animation panel and draw new frame.
+    ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    
     bool shouldContinue = true;
     for (int i = 0; i < computationToShowRatio; i++) {
       world.step(TIME_STEP, VELOCITY_ITERATIONS, POSITION_ITERATIONS);
@@ -86,8 +89,6 @@ abstract class Demo {
       }
     }
 
-    // Clear the animation panel and draw new frame.
-    ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
     world.drawDebugData();
 
     if (shouldContinue) {
