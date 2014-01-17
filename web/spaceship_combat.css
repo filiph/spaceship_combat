@@ -13,8 +13,12 @@ h1, p {
 }
 
 .left-overlay {
-  float: left;
-  width: 50%
+  width: 50%;
+  position: fixed;
+  left: 0;
+  top: 4em;
+  background: none;
+  padding: 2em
 }
 
 .floater {
