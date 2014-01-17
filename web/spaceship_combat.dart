@@ -19,6 +19,14 @@ PreElement resultsEl;
 
 ShipCombatSituation currentSituation;
 
+List<ShipBrainMode> modes = [
+    new FaceOtherShipMode(),
+    new RamMode(),
+    new RunAwayMode(),
+    new DockLeftMode(),
+    new MaintainRelativePositionMode()
+];
+
 void main() {
   experimentStatusEl = querySelector("#experiment-status");
   globalStatusEl = querySelector("#global-status");
@@ -35,15 +43,18 @@ void main() {
       Demo.computationToShowRatio = 1000);
   
   querySelector("#putOnNoseTrain").onClick.listen((_) => 
-      startGeneticAlgorithm(new FaceOtherShipMode()));
+      runGeneticAlgorithm(new FaceOtherShipMode()));
   querySelector("#ramTrain").onClick.listen((_) => 
-      startGeneticAlgorithm(new RamMode()));
+      runGeneticAlgorithm(new RamMode()));
   querySelector("#runAwayTrain").onClick.listen((_) => 
-      startGeneticAlgorithm(new RunAwayMode()));
+      runGeneticAlgorithm(new RunAwayMode()));
   querySelector("#dockLeftTrain").onClick.listen((_) => 
-      startGeneticAlgorithm(new DockLeftMode()));
+      runGeneticAlgorithm(new DockLeftMode()));
   querySelector("#maintainSpeedTrain").onClick.listen((_) => 
-      startGeneticAlgorithm(new MaintainRelativePositionMode()));
+      runGeneticAlgorithm(new MaintainRelativePositionMode()));
+  
+  querySelector("#trainAll").onClick.listen((_) => 
+      trainAll(0));
   
   querySelector("#putOnNoseBest").onClick.listen((_) => 
       loopBestPhenotype(new FaceOtherShipMode()));
@@ -57,7 +68,23 @@ void main() {
       loopBestPhenotype(new MaintainRelativePositionMode()));
 
   
-  startGeneticAlgorithm(new FaceOtherShipMode());
+  runGeneticAlgorithm(new FaceOtherShipMode());
+}
+
+List<NeuroPilotPhenotype> winners = new List();
+
+void trainAll(int i) {
+  if (i >= modes.length) {
+    resultsEl.text = "ALL RESULTS:\n";
+    resultsEl.text += winners.map((ph) => ph.genesAsString).join("\n");
+    return;  // We're done.
+  }
+  
+  runGeneticAlgorithm(modes[i])
+  .then((NeuroPilotPhenotype winner) {
+    winners.add(winner);
+    trainAll(i + 1);
+  });
 }
 
 /**
@@ -100,9 +127,11 @@ void loopBestPhenotype(ShipBrainMode modeToTest, [int i = 0]) {
 }
 
 /**
- * Start the algorithm.
+ * Start the algorithm. Returns a [Future] that completes with the winner
+ * [NeuroPilotPhenotype].
  */
-void startGeneticAlgorithm(ShipBrainMode modeToTest) {
+Future<NeuroPilotPhenotype> runGeneticAlgorithm(ShipBrainMode modeToTest) {
+  var completer = new Completer();
   if (currentSituation != null) currentSituation.destroy();
   
   globalStatusEl.text = "Evolving $modeToTest";
@@ -157,8 +186,9 @@ void startGeneticAlgorithm(ShipBrainMode modeToTest) {
     });
   }
   
-  GeneticAlgorithm<NeuroPilotPhenotype> algo = new GeneticAlgorithm(firstGeneration, evaluator, breeder,
-      statusf: (status) => globalStatusEl.text = status.toString());
+  GeneticAlgorithm<NeuroPilotPhenotype> algo = 
+      new GeneticAlgorithm(firstGeneration, evaluator, breeder,
+          statusf: (status) => globalStatusEl.text = status.toString());
   algo.onGenerationEvaluated.listen((Generation<NeuroPilotPhenotype> g) {
     resultsEl.text = g.members.first.genesAsString;
     if (modeToTest._bestPhenotypeGenes == null) {
@@ -169,5 +199,8 @@ void startGeneticAlgorithm(ShipBrainMode modeToTest) {
   .then((_) {
     algo.generations.last.members
       .forEach((Phenotype ph) => print("${ph.genesAsString},"));
+    completer.complete(algo.generations.last.best);
   });
+  
+  return completer.future;
 }
