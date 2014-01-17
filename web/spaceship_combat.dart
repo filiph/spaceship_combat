@@ -42,6 +42,8 @@ void main() {
       startGeneticAlgorithm(new RunAwayMode()));
   querySelector("#dockLeftTrain").onClick.listen((_) => 
       startGeneticAlgorithm(new DockLeftMode()));
+  querySelector("#maintainSpeedTrain").onClick.listen((_) => 
+      startGeneticAlgorithm(new MaintainRelativePositionMode()));
   
   querySelector("#putOnNoseBest").onClick.listen((_) => 
       loopBestPhenotype(new FaceOtherShipMode()));
@@ -51,6 +53,9 @@ void main() {
       loopBestPhenotype(new RunAwayMode()));
   querySelector("#dockLeftBest").onClick.listen((_) => 
       loopBestPhenotype(new DockLeftMode()));
+  querySelector("#maintainSpeedBest").onClick.listen((_) => 
+      loopBestPhenotype(new MaintainRelativePositionMode()));
+
   
   startGeneticAlgorithm(new FaceOtherShipMode());
 }
@@ -62,6 +67,11 @@ void loopBestPhenotype(ShipBrainMode modeToTest, [int i = 0]) {
   if (currentSituation != null) currentSituation.destroy();
   
   globalStatusEl.text = "Showing best for $modeToTest";
+  
+  if (modeToTest.bestPhenotype == null) {
+    globalStatusEl.text += "\nERROR: No best phenotype found so far.";
+    return;
+  }
   
   print("Experiment $i");
   if (i >= modeToTest.setupFunctions.length) {

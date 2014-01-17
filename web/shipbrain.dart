@@ -318,7 +318,7 @@ OUTP  = ${ship.brainMode.brain.use(inputs).map((num o) => o.toStringAsFixed(2)).
 class RamMode extends ThrusterControllingShipBrainMode {
   RamMode() : super();
   
-  var _bestPhenotypeGenes = [-1,-0.21414186763937182,-0.9923237386960386,-1,-0.32499690507565293,-1,-0.1541420162315008,0.05253919114156824,-0.6377496625617043,1,-1,-0.6062381506918497,-0.36035078589680647,-0.4527663111751232,0.08511875257206558,0.6431275754055721,0.014536430399076705,0.7058647312553057,0.2313703301879273,0.030241828752782807,-0.9916426613529643,-1,0.8423245602800793,-0.1959763195306108,0.9811867740451166,-0.5596818888829889,0.7096818816400159,1,0.5247805970910993,0.6831649221209533,-0.43638463320329723,-0.4452521703364858,-1,0.16108913651144197,-0.6077066318781632,0.007923413542061164,0.788419136299338,-0.4967670400005586,0.8954297482022853,-0.02291970703206303,-0.730942963102307,0.5127235838190218,0.8151821242376245,-1,-1,0.4582192722405005,0.23198912631514568,-0.6302459228799329,-0.1542277963798644,1,-0.18146961541869988,-1,-0.1363412456504831,0.33159503092436915,-0.5205104439506165,0.6802052658571951,-0.3226176911015066,-0.641860147527106,1,0.06568772682882362,0.7703281772224944,0.32768566232673924,0.9091512232040724,-0.23686887081252794,-1,-0.8013651367705967,0.8128964905073257,0.5106398719511036,-0.3612132247554689,-1,-0.13737279306235406,0.636790672526869,0.13803503402439388,-0.6817824482982322,-0.08420225701011264,1,-0.4496054418665034,-0.7387820960018752];
+  var _bestPhenotypeGenes = [-0.2537667531647365,-0.2824370783837371,-1,-1,1,-0.5532399906089747,-0.7314457333634223,-0.11563335201556169,-0.22411972113568424,-0.2877179266492562,1,-0.18793383710686662,0.10537016202332827,-0.555909753499102,0.546668728936833,-0.9088411605571622,1,0.2655258667992384,1,-0.9783756789795739,-1,1,-0.471709526328119,0.5164852717661048,0.8904077108090009,1,-0.5923979562645987,-0.8980681696635744,0.2889560646527132,1,0.17692080284674927,-0.8843850659739674,-0.07440317332918478,0.85582461819339,-0.8253813354285879,-0.671463148202825,0.3929051429648194,-1,-1,-1,0.9184654924263023,0.2119998473984801,0.9121475679164168,1,1,-1,-0.08814490404505881,-0.9430987513441698,-0.5476444157834339,0.777690042553318,-0.42911385160559967,0.37991045710189364,0.10029346045237886,-0.04350917315255565,1,0.4523765757360789,-1,0.5399712879645204,0.9058070540387566,-0.13504691749159492,1,1,0.4437834747735294,-0.49483057261215135,-0.6835557012976075,-1,1,1,1,-0.8075614531543236,-0.46579702173610205,-0.820815148758167,-0.9906103644466935,-0.9093783534575983,-0.899286093659438,-0.6463855625086348,-0.6226198731858776,-0.22482416520500337];
   
   int inputNeuronsCount = 6;
   
@@ -446,7 +446,7 @@ OUTP  = ${ship.brainMode.brain.use(inputs).map((num o) => o.toStringAsFixed(2)).
 }
 
 class DockLeftMode extends ThrusterControllingShipBrainMode {
-  int inputNeuronsCount = 6;
+  int inputNeuronsCount = 8;
   
   var _bestPhenotypeGenes = [-0.24244791107859598,0.7903805282831933,1,-0.022037460317881674,-1,-0.16018563641338956,1,1,-0.2802524966136206,-0.12445723039245826,-0.2705591234457543,0.5131333400013272,1,1,-0.01483160430990571,-0.609387060824186,1,-1,0.08533083177790757,0.1962129383475657,-1,1,-0.8784241641756751,0.2760070036287563,-1,0.4402608648369122,-0.015133832637720168,0.25440899652239635,1,-1,0.026494220288640236,-0.9580184413483499,-0.6309585096563513,-0.07522818209006954,0.9395266843780334,1,-1,0.7398115259221514,0.19738774337183185,0.8229477924979436,1,0.1851508577592038,-0.8591781333902133,0.9884033344479013,1,0.9737664112861641,0.11287999040498775,0.6250866611174244,0.09440912697412096,-0.5668353644516646,-0.672728450563324,0.40753844719342625,-1,1,-1,-1,0.5354291563954254,-0.6290598622877686,-0.6235496002437642,-1,-0.25848440618267543,0.006162585147543309,0.2806942565528201,0.9457177997300954,1,-0.4497248966725218,0.708135956004055,1,0.90582613041794,-0.37867029589156487,0.18353380952702825,0.523587505737489,-0.9675157840594368,1,-0.0956630253607329,-1,1,-0.02239229354617711];
   
@@ -464,6 +464,10 @@ class DockLeftMode extends ThrusterControllingShipBrainMode {
     inputs[4] = ShipBrainMode.valueToNeuralInput(angle, 0, - Math.PI * 2);
     inputs[5] = ShipBrainMode.valueToNeuralInput(
         ship.getRelativeVelocityTo(target).length, 0, 5);
+    num velocityAngle = ship.getVelocityAngleOf(target);
+    inputs[6] = ShipBrainMode.valueToNeuralInput(velocityAngle, 0, Math.PI * 2);
+    inputs[7] = 
+        ShipBrainMode.valueToNeuralInput(velocityAngle, 0, - Math.PI * 2);
     
     return inputs;
   }
@@ -525,6 +529,80 @@ OUTP  = ${ship.brainMode.brain.use(inputs).map((num o) => o.toStringAsFixed(2)).
   int timeToEvaluate = 2000;
 }
 
+class MaintainRelativePositionMode extends ThrusterControllingShipBrainMode {
+  int inputNeuronsCount = 8;
+  
+  var _bestPhenotypeGenes = null;
+  
+  List<num> getInputs(AIBox2DShip ship, Box2DShip target, ShipCombatSituation s,
+      Object userData) {
+    List<num> inputs = new List<num>(inputNeuronsCount);
+    
+    num angVel = ship.body.angularVelocity;
+    inputs[0] = ShipBrainMode.valueToNeuralInput(angVel, 0, 2);
+    inputs[1] = ShipBrainMode.valueToNeuralInput(angVel, 0, -2);
+    inputs[2] = ShipBrainMode.valueToNeuralInput(
+        ship.getRelativeVectorTo(target).length, 0, 50);
+    num angle = ship.getAngleTo(target);
+    inputs[3] = ShipBrainMode.valueToNeuralInput(angle, 0, Math.PI * 2);
+    inputs[4] = ShipBrainMode.valueToNeuralInput(angle, 0, - Math.PI * 2);
+    inputs[5] = ShipBrainMode.valueToNeuralInput(
+        ship.getRelativeVelocityTo(target).length, 0, 5);
+    num velocityAngle = ship.getVelocityAngleOf(target);
+    inputs[6] = ShipBrainMode.valueToNeuralInput(velocityAngle, 0, Math.PI * 2);
+    inputs[7] = 
+        ShipBrainMode.valueToNeuralInput(velocityAngle, 0, - Math.PI * 2);
+    
+    return inputs;
+  }
+  
+  List<SetupFunction> setupFunctions = [
+      (ShipCombatSituation s) {
+        // Default
+      },
+      (ShipCombatSituation s) {
+        s.ship.body.setTransform(new Vector2(0.0, 0.0), - Math.PI / 2);
+        s.ship.body.applyLinearImpulse(new Vector2(2.0, 0.0), new Vector2(0.0, -1.0));
+      },
+      (ShipCombatSituation s) {
+        s.ship.body.setTransform(new Vector2(0.0, 0.0), - Math.PI / 2);
+        s.ships.last.body.applyLinearImpulse(new Vector2(0.1, 0.0), s.ships.last.body.position);
+      },
+      (ShipCombatSituation s) {
+        s.ships.last.body.applyLinearImpulse(new Vector2(-0.2, 0.0), s.ships.last.body.position);
+      },
+  ];
+  
+  num iterativeFitnessFunction(AIBox2DShip ship, Box2DShip target, 
+                               ShipCombatSituation s, Object userData) {
+    num velocityScore = ship.getRelativeVelocityTo(target).length;
+    num angVel = ship.body.angularVelocity.abs();
+    
+    num fitness = 10 * velocityScore + angVel;
+    
+    statusUpdateCounter++;
+    if (statusUpdateCounter == STATUS_UPDATE_FREQ) {
+      var inputs = ship.brainMode.getInputs(ship, ship.target, ship.situation,
+          userData);
+      experimentStatusEl.text = """ 
+Velo (${velocityScore.toStringAsFixed(2)})
+AngV (${(ship.body.angularVelocity).toStringAsFixed(2)})
+SCORE = ${fitness.toStringAsFixed(2)}
+CUMSC = ${s.cummulativeScore.toStringAsFixed(2)}
+INPT  = ${inputs.map((num o) => o.toStringAsFixed(2)).join(" ")}
+OUTP  = ${ship.brainMode.brain.use(inputs).map((num o) => o.toStringAsFixed(2)).join(" ")}
+      """;
+      statusUpdateCounter = 0;
+    }
+    
+    if (ship.body.contactList != null) {
+      fitness += 50000;
+    }
+    
+    return fitness;
+  }
+}
+
 class ShipCombatSituation extends Demo {
   /** Constructs a new BoxTest. */
   ShipCombatSituation({this.fitnessFunction, this.maxTimeToRun: 1000}) 
@@ -541,7 +619,16 @@ class ShipCombatSituation extends Demo {
    * the _first_ ship is evaluated (not the others).
    */
   Set<AIBox2DShip> _aiShips = new Set<AIBox2DShip>();
+  /**
+   * This is _the_ ship being evaluated.
+   */
   AIBox2DShip ship;
+  
+  /**
+   * A list of all the ships in this simulation. It's ordered in the way those
+   * ships were added.
+   */
+  List<Box2DShip> ships = new List<Box2DShip>();
   
   void addShip(Box2DShip ship, {bool evaluatedShip: false}) {
     if (ship is AIBox2DShip) {
@@ -551,6 +638,7 @@ class ShipCombatSituation extends Demo {
       }
     }
     bodies.add(ship.body);
+    ships.add(ship);
   }
   
   /// Number of iterations to run this simulation. When set to [:null:], runs
@@ -589,6 +677,10 @@ class ShipCombatSituation extends Demo {
       }
       cummulativeScore += score;
     }
+    num scale = 10.0;
+    debugDraw.setCamera(ship.body.position.x * scale + 450, 
+        ship.body.position.y * scale + 300, scale);
+    
     return true; // continue
   }
 }
@@ -614,8 +706,8 @@ class Box2DShip {
     // Define body
     final BodyDef bodyDef = new BodyDef();
     bodyDef.type = BodyType.DYNAMIC;
-    bodyDef.linearDamping = 0.2;
-    bodyDef.angularDamping = 0.2;
+    bodyDef.linearDamping = 0.1;
+    bodyDef.angularDamping = 0.1;
     bodyDef.position = position;
 
     // Create body and fixture from definitions
@@ -660,6 +752,17 @@ class Box2DShip {
   Vector2 getRelativeVelocityTo(Box2DShip target) {
     return body.getLinearVelocityFromLocalPoint(ORIGIN)
         .sub(target.body.getLinearVelocityFromLocalPoint(ORIGIN));
+  }
+  /*
+   * The angle at which [this] is moving towards/away from [target]. For 
+   * example, when this ship is aproaching target straight on, the velocity
+   * angle would be 180° (pi).
+   */
+  num getVelocityAngleOf(Box2DShip target) {
+    Vector2 relativeVelocityTo = getRelativeVelocityTo(target);
+    return Math.acos(relativeVelocityTo.dot(FORWARD) /
+        (FORWARD.length * relativeVelocityTo.length)) *
+        (relativeVelocityTo.dot(RIGHT) > 0 ? 1 : -1);
   }
 }
 

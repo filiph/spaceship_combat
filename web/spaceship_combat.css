@@ -24,3 +24,7 @@ h1, p {
   top: 4em;
   background: none;
 }
+
+#results {
+  clear: both;
+}
