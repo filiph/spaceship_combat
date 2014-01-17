@@ -255,30 +255,19 @@ final List<SetupFunction> genericSetupFunctions = [
 class FaceOtherShipMode extends ThrusterControllingShipBrainMode {
   FaceOtherShipMode() : super();
   
-  var _bestPhenotypeGenes = [-0.4927004684791765,-0.39304017697305427,-0.18016784473911818,-0.8741873402949427,-0.6123149442736266,0.24812348870806833,0.026310196741507585,0.3993727145128865,-0.8256245005281495,-1,-0.8512591649942802,0.30231308063154105,1,-1,0.2757452281839734,-1,-0.37326701843436294,-0.3734724616766214,-0.14280755127003708,0.09032293129473068,-0.6358767423769756,1,-0.2962949846774998,-0.588774623865115,1,-0.8323094714959451,0.47456291533273554,0.863755991960578,0.4937571744880771,1,0.3321709421112269,0.504848894194909,-0.06859071666649497,0.08808642357937302,1,0.8117180900816743,1,0.3171273068742728,-0.5431208481880703,-0.13211101033393713,0.039420710451595564,-0.029520722612379702,-0.6180368538955796,-0.4705494781076802,0.8954181944237671,-0.3633127561564251,-0.6388063909828914,1,0.13772074393713263,1,-0.2958069135834749,-0.1291778868118323,-1,-1,0.655572554719446,-0.04754323011822925,-1,-0.528116238231662,0.5850482002454214,-0.11464038671837962,-1,-1,0.03011937269569387,1,-0.8434636969101155,-0.9756925162260328,0.3726643056750354,-1,0.21361507429022142,-1,0.50403842456173,-1,0.06206082416657388,1,0.7302210047321842,-0.7563466482882999,-0.6726742217985053,0.3986015965076579];
+  var _bestPhenotypeGenes = null;
 
-  int inputNeuronsCount = 6;
+  int inputNeuronsCount = 8;
   
   List<num> getInputs(AIBox2DShip ship, Box2DShip target, ShipCombatSituation s,
-      Object userData) {
-    if (target == null) throw "Cannot put nose on null target.";
-    List<num> inputs = new List(inputNeuronsCount);
-    
-    num angVel = ship.body.angularVelocity;
-    inputs[0] = ShipBrainMode.valueToNeuralInput(angVel, 0, 2);
-    inputs[1] = ShipBrainMode.valueToNeuralInput(angVel, 0, -2);
-    inputs[2] = ShipBrainMode.valueToNeuralInput(
-        ship.getRelativeVectorTo(target).length, 0, 50);
-    num angle = ship.getAngleTo(target);
-    inputs[3] = ShipBrainMode.valueToNeuralInput(angle, 0, Math.PI * 2);
-    inputs[4] = ShipBrainMode.valueToNeuralInput(angle, 0, - Math.PI * 2);
-    inputs[5] = ShipBrainMode.valueToNeuralInput(
-        ship.getRelativeVelocityTo(target).length, 0, 5);
-    
-    return inputs;
-  }
+      Object userData) => AIBox2DShip.getStandardTargetInputs(ship, target);
 
-  List<SetupFunction> setupFunctions = genericSetupFunctions;
+  List<SetupFunction> setupFunctions = genericSetupFunctions
+      ..add((ShipCombatSituation s) {
+        print("- back slightly off, target moving");
+        s.ship.body.setTransform(new Vector2(0.0, 0.0), - Math.PI / 2 + 0.1);
+        s.ships.last.body.applyLinearImpulse(new Vector2(-0.1, -0.2), new Vector2(0.0, -1.0));
+      });
   
   num iterativeFitnessFunction(AIBox2DShip ship, Box2DShip target,
                                ShipCombatSituation worldState,
@@ -286,11 +275,9 @@ class FaceOtherShipMode extends ThrusterControllingShipBrainMode {
     num angleScore = ship.getAngleTo(target).abs();
     num angularScore = ship.body.angularVelocity.abs();
     num relativeScore = ship.getRelativeVelocityTo(target).length;
-    num absoluteScore = 
-        ship.body.getLinearVelocityFromLocalPoint(new Vector2(0.0, 0.0)).length;
     
     num fitness = 
-        (10 * angleScore + angularScore + relativeScore + absoluteScore);
+        (10 * angleScore + angularScore + relativeScore);
     
     if (ship.body.contactList != null) {
       fitness += 50000;
@@ -303,7 +290,7 @@ class FaceOtherShipMode extends ThrusterControllingShipBrainMode {
 Angle (${ship.getAngleTo(target).toStringAsFixed(2)}) ${angleScore < 0.5 ? "*": ""}
 AnguV (${ship.body.angularVelocity.toStringAsFixed(2)})
 RelV  (${ship.getRelativeVelocityTo(target).length.toStringAsFixed(2)})
-AbsV  (${absoluteScore.toStringAsFixed(2)})
+AbsV  (---)
 SCORE = ${fitness.toStringAsFixed(2)}
 CUMSC = ${worldState.cummulativeScore.toStringAsFixed(2)}
 INPT  = ${inputs.map((num o) => o.toStringAsFixed(2)).join(" ")}
@@ -318,28 +305,12 @@ OUTP  = ${ship.brainMode.brain.use(inputs).map((num o) => o.toStringAsFixed(2)).
 class RamMode extends ThrusterControllingShipBrainMode {
   RamMode() : super();
   
-  var _bestPhenotypeGenes = [-0.2537667531647365,-0.2824370783837371,-1,-1,1,-0.5532399906089747,-0.7314457333634223,-0.11563335201556169,-0.22411972113568424,-0.2877179266492562,1,-0.18793383710686662,0.10537016202332827,-0.555909753499102,0.546668728936833,-0.9088411605571622,1,0.2655258667992384,1,-0.9783756789795739,-1,1,-0.471709526328119,0.5164852717661048,0.8904077108090009,1,-0.5923979562645987,-0.8980681696635744,0.2889560646527132,1,0.17692080284674927,-0.8843850659739674,-0.07440317332918478,0.85582461819339,-0.8253813354285879,-0.671463148202825,0.3929051429648194,-1,-1,-1,0.9184654924263023,0.2119998473984801,0.9121475679164168,1,1,-1,-0.08814490404505881,-0.9430987513441698,-0.5476444157834339,0.777690042553318,-0.42911385160559967,0.37991045710189364,0.10029346045237886,-0.04350917315255565,1,0.4523765757360789,-1,0.5399712879645204,0.9058070540387566,-0.13504691749159492,1,1,0.4437834747735294,-0.49483057261215135,-0.6835557012976075,-1,1,1,1,-0.8075614531543236,-0.46579702173610205,-0.820815148758167,-0.9906103644466935,-0.9093783534575983,-0.899286093659438,-0.6463855625086348,-0.6226198731858776,-0.22482416520500337];
+  var _bestPhenotypeGenes = null;
   
-  int inputNeuronsCount = 6;
+  int inputNeuronsCount = 8;
   
   List<num> getInputs(AIBox2DShip ship, Box2DShip target, ShipCombatSituation s,
-      Object userData) {
-    if (target == null) throw "Cannot put nose on null target.";
-    List<num> inputs = new List(inputNeuronsCount);
-    
-    num angVel = ship.body.angularVelocity;
-    inputs[0] = ShipBrainMode.valueToNeuralInput(angVel, 0, 2);
-    inputs[1] = ShipBrainMode.valueToNeuralInput(angVel, 0, -2);
-    inputs[2] = ShipBrainMode.valueToNeuralInput(
-        ship.getRelativeVectorTo(target).length, 0, 50);
-    num angle = ship.getAngleTo(target);
-    inputs[3] = ShipBrainMode.valueToNeuralInput(angle, 0, Math.PI * 2);
-    inputs[4] = ShipBrainMode.valueToNeuralInput(angle, 0, - Math.PI * 2);
-    inputs[5] = ShipBrainMode.valueToNeuralInput(
-        ship.getRelativeVelocityTo(target).length, 0, 5);
-    
-    return inputs;
-  }
+      Object userData) => AIBox2DShip.getStandardTargetInputs(ship, target);
   
   List<SetupFunction> setupFunctions = genericSetupFunctions;
   
@@ -375,27 +346,12 @@ OUTP  = ${ship.brainMode.brain.use(inputs).map((num o) => o.toStringAsFixed(2)).
 }
 
 class RunAwayMode extends ThrusterControllingShipBrainMode {
-  int inputNeuronsCount = 6;
+  int inputNeuronsCount = 8;
 
-  var _bestPhenotypeGenes = [-0.6365017683440641,0.4948233947431637,1,-0.2978041998465111,0.5483557848811249,1,-0.19950995684959594,1,0.9923508371172551,1,0.9703486932827083,0.19704397368841464,0.002260979724461043,0.3799558162277141,1,0.7271738352987316,0.7172617632258849,1,0.2447342310336107,0.14486030445194675,1,-0.08680643368129926,0.28621850573394125,1,1,0.1948468255674236,-0.8618221997472579,-0.5689250971144446,-1,-1,-0.47475301049804663,-1,1,-0.9832649592586187,0.6625999444242254,0.0859548534401322,-0.05183690796488194,1,1,0.9369797133734912,-0.767108902956245,1,0.9834216394806794,1,1,0.5364263388053601,-1,1,-1,-1,-1,-1,-0.7950962936618986,-1,-0.8630781760686892,0.25925360062598557,0.30956986037094847,0.11676731605244162,0.23965856944367991,0.7808912500169252,-1,-1,-0.017289719774240098,0.1845985460885149,1,-1,0.42786145626845595,1,0.8102764068936965,0.6286269633226826,0.7675326785926218,1,-0.3381967560812773,-1,-1,-1,-1,-1];
+  var _bestPhenotypeGenes = null;
   
   List<num> getInputs(AIBox2DShip ship, Box2DShip target, ShipCombatSituation s,
-      Object userData) {
-    List<num> inputs = new List<num>(inputNeuronsCount);
-    
-    num angVel = ship.body.angularVelocity;
-    inputs[0] = ShipBrainMode.valueToNeuralInput(angVel, 0, 2);
-    inputs[1] = ShipBrainMode.valueToNeuralInput(angVel, 0, -2);
-    inputs[2] = ShipBrainMode.valueToNeuralInput(
-        ship.getRelativeVectorTo(target).length, 0, 50);
-    num angle = ship.getAngleTo(target);
-    inputs[3] = ShipBrainMode.valueToNeuralInput(angle, 0, Math.PI * 2);
-    inputs[4] = ShipBrainMode.valueToNeuralInput(angle, 0, - Math.PI * 2);
-    inputs[5] = ShipBrainMode.valueToNeuralInput(
-        ship.getRelativeVelocityTo(target).length, 0, 5);
-    
-    return inputs;
-  }
+      Object userData) => AIBox2DShip.getStandardTargetInputs(ship, target);
   
   List<SetupFunction> setupFunctions = 
       new List<SetupFunction>.from(genericSetupFunctions)
@@ -448,29 +404,10 @@ OUTP  = ${ship.brainMode.brain.use(inputs).map((num o) => o.toStringAsFixed(2)).
 class DockLeftMode extends ThrusterControllingShipBrainMode {
   int inputNeuronsCount = 8;
   
-  var _bestPhenotypeGenes = [-0.24244791107859598,0.7903805282831933,1,-0.022037460317881674,-1,-0.16018563641338956,1,1,-0.2802524966136206,-0.12445723039245826,-0.2705591234457543,0.5131333400013272,1,1,-0.01483160430990571,-0.609387060824186,1,-1,0.08533083177790757,0.1962129383475657,-1,1,-0.8784241641756751,0.2760070036287563,-1,0.4402608648369122,-0.015133832637720168,0.25440899652239635,1,-1,0.026494220288640236,-0.9580184413483499,-0.6309585096563513,-0.07522818209006954,0.9395266843780334,1,-1,0.7398115259221514,0.19738774337183185,0.8229477924979436,1,0.1851508577592038,-0.8591781333902133,0.9884033344479013,1,0.9737664112861641,0.11287999040498775,0.6250866611174244,0.09440912697412096,-0.5668353644516646,-0.672728450563324,0.40753844719342625,-1,1,-1,-1,0.5354291563954254,-0.6290598622877686,-0.6235496002437642,-1,-0.25848440618267543,0.006162585147543309,0.2806942565528201,0.9457177997300954,1,-0.4497248966725218,0.708135956004055,1,0.90582613041794,-0.37867029589156487,0.18353380952702825,0.523587505737489,-0.9675157840594368,1,-0.0956630253607329,-1,1,-0.02239229354617711];
+  var _bestPhenotypeGenes = null;
   
   List<num> getInputs(AIBox2DShip ship, Box2DShip target, ShipCombatSituation s,
-      Object userData) {
-    List<num> inputs = new List<num>(inputNeuronsCount);
-    
-    num angVel = ship.body.angularVelocity;
-    inputs[0] = ShipBrainMode.valueToNeuralInput(angVel, 0, 2);
-    inputs[1] = ShipBrainMode.valueToNeuralInput(angVel, 0, -2);
-    inputs[2] = ShipBrainMode.valueToNeuralInput(
-        ship.getRelativeVectorTo(target).length, 0, 50);
-    num angle = ship.getAngleTo(target);
-    inputs[3] = ShipBrainMode.valueToNeuralInput(angle, 0, Math.PI * 2);
-    inputs[4] = ShipBrainMode.valueToNeuralInput(angle, 0, - Math.PI * 2);
-    inputs[5] = ShipBrainMode.valueToNeuralInput(
-        ship.getRelativeVelocityTo(target).length, 0, 5);
-    num velocityAngle = ship.getVelocityAngleOf(target);
-    inputs[6] = ShipBrainMode.valueToNeuralInput(velocityAngle, 0, Math.PI * 2);
-    inputs[7] = 
-        ShipBrainMode.valueToNeuralInput(velocityAngle, 0, - Math.PI * 2);
-    
-    return inputs;
-  }
+      Object userData) => AIBox2DShip.getStandardTargetInputs(ship, target);
   
   List<SetupFunction> setupFunctions = 
       new List<SetupFunction>.from(genericSetupFunctions)
@@ -535,26 +472,7 @@ class MaintainRelativePositionMode extends ThrusterControllingShipBrainMode {
   var _bestPhenotypeGenes = null;
   
   List<num> getInputs(AIBox2DShip ship, Box2DShip target, ShipCombatSituation s,
-      Object userData) {
-    List<num> inputs = new List<num>(inputNeuronsCount);
-    
-    num angVel = ship.body.angularVelocity;
-    inputs[0] = ShipBrainMode.valueToNeuralInput(angVel, 0, 2);
-    inputs[1] = ShipBrainMode.valueToNeuralInput(angVel, 0, -2);
-    inputs[2] = ShipBrainMode.valueToNeuralInput(
-        ship.getRelativeVectorTo(target).length, 0, 50);
-    num angle = ship.getAngleTo(target);
-    inputs[3] = ShipBrainMode.valueToNeuralInput(angle, 0, Math.PI * 2);
-    inputs[4] = ShipBrainMode.valueToNeuralInput(angle, 0, - Math.PI * 2);
-    inputs[5] = ShipBrainMode.valueToNeuralInput(
-        ship.getRelativeVelocityTo(target).length, 0, 5);
-    num velocityAngle = ship.getVelocityAngleOf(target);
-    inputs[6] = ShipBrainMode.valueToNeuralInput(velocityAngle, 0, Math.PI * 2);
-    inputs[7] = 
-        ShipBrainMode.valueToNeuralInput(velocityAngle, 0, - Math.PI * 2);
-    
-    return inputs;
-  }
+      Object userData) => AIBox2DShip.getStandardTargetInputs(ship, target);
   
   List<SetupFunction> setupFunctions = [
       (ShipCombatSituation s) {
@@ -706,8 +624,8 @@ class Box2DShip {
     // Define body
     final BodyDef bodyDef = new BodyDef();
     bodyDef.type = BodyType.DYNAMIC;
-    bodyDef.linearDamping = 0.1;
-    bodyDef.angularDamping = 0.1;
+    bodyDef.linearDamping = 0.1; // Reality is Unrealistic...
+    bodyDef.angularDamping = 0.2; // As above, plus let's count with stabilization jets...
     bodyDef.position = position;
 
     // Create body and fixture from definitions
@@ -787,6 +705,32 @@ class AIBox2DShip extends Box2DShip {
     if (brainMode != null) {
       brainMode.control(this, target, situation, userData);
     }
+  }
+  
+  /**
+   * A set of inputs useful for most maneuvers that involve another ship.
+   * All inputs are relative (relative speed of [ship] to [target], not absolute
+   * speed of [ship] in the environment).
+   */
+  static List<num> getStandardTargetInputs(Box2DShip ship, Box2DShip target) {
+    List<num> inputs = new List<num>(8);
+    
+    num angVel = ship.body.angularVelocity;
+    inputs[0] = ShipBrainMode.valueToNeuralInput(angVel, 0, 2);
+    inputs[1] = ShipBrainMode.valueToNeuralInput(angVel, 0, -2);
+    inputs[2] = ShipBrainMode.valueToNeuralInput(
+        ship.getRelativeVectorTo(target).length, 0, 50);
+    num angle = ship.getAngleTo(target);
+    inputs[3] = ShipBrainMode.valueToNeuralInput(angle, 0, Math.PI * 2);
+    inputs[4] = ShipBrainMode.valueToNeuralInput(angle, 0, - Math.PI * 2);
+    inputs[5] = ShipBrainMode.valueToNeuralInput(
+        ship.getRelativeVelocityTo(target).length, 0, 5);
+    num velocityAngle = ship.getVelocityAngleOf(target);
+    inputs[6] = ShipBrainMode.valueToNeuralInput(velocityAngle, 0, Math.PI * 2);
+    inputs[7] = 
+        ShipBrainMode.valueToNeuralInput(velocityAngle, 0, - Math.PI * 2);
+    
+    return inputs;
   }
 }
 
