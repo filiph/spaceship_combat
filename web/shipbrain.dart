@@ -596,8 +596,11 @@ class ShipCombatSituation extends Demo {
       cummulativeScore += score;
     }
     num scale = 10.0;
-    debugDraw.setCamera(ship.body.position.x * scale + 450, 
-        ship.body.position.y * scale + 300, scale);
+    
+    if (Demo.computationToShowRatio <= 10) {  // Save some CPU on high speeds.
+      debugDraw.setCamera(ship.body.position.x * scale + 450, 
+          ship.body.position.y * scale + 300, scale);
+    }
     
     return true; // continue
   }
