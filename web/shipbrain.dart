@@ -34,7 +34,7 @@ class NeuroPilotSerialEvaluator extends PhenotypeSerialEvaluator<NeuroPilotPheno
   final ShipBrainMode brainMode;
   
   static AIBox2DShip _createBodega(ShipCombatSituation s) {
-    return new AIBox2DShip(s, 1.0, 3.0, new Vector2(0.0, 5.0),
+    return new AIBox2DShip(s, 1.0, 3.0, new Vector2(0.0, 15.0),
           thrusters: [new Thruster(-1.5, -0.5, 1, 0),  // Main thrusters
                       new Thruster(-1.5,  0.5, 1, 0),
                       new Thruster( 1.5,    0, -0.5, 0), // Retarder
@@ -45,7 +45,7 @@ class NeuroPilotSerialEvaluator extends PhenotypeSerialEvaluator<NeuroPilotPheno
   }
   
   static Box2DShip _createMessenger(ShipCombatSituation s) {
-    return new Box2DShip(s, 0.3, 0.5, new Vector2(0.0, 15.0));
+    return new Box2DShip(s, 0.3, 0.5, new Vector2(0.0, 0.0));
   }
   
   Future<num> runOneEvaluation(NeuroPilotPhenotype phenotype, int i) {
@@ -234,21 +234,29 @@ int statusUpdateCounter = 0;
 
 final List<SetupFunction> genericSetupFunctions = [
     (ShipCombatSituation s) {
-      print("- to the left");
-      s.ship.body.setTransform(new Vector2(0.0, 0.0), Math.PI / 4);
+      // Other ship on 10 o'clock
+      s.ship.body.setTransform(new Vector2(0.0, -10.0), Math.PI / 4);
     },
     (ShipCombatSituation s) {
-      print("- to the right");
-      s.ship.body.setTransform(new Vector2(0.0, 0.0), 3 * Math.PI / 4);
+      // Other ship on 2 o'clock, farther away, with sideways impulse.
+      s.ship.body.setTransform(new Vector2(5.0, -15.0), 3 * Math.PI / 4);
+      s.ship.body.applyLinearImpulse(new Vector2(-2.0, 0.0), 
+          new Vector2(5.0, -15.0));
     },
     (ShipCombatSituation s) {
-      print("- back with impulse");
-      s.ship.body.setTransform(new Vector2(0.0, 0.0), - Math.PI / 2);
+      // Other ship on 4 o'clock, with forward impulse.
+      s.ship.body.setTransform(new Vector2(-1.0, 15.0), 3 * Math.PI / 4);
+      s.ship.body.applyLinearImpulse(new Vector2(0.0, 1.0), 
+          new Vector2(-1.0, 15.0));
+    },
+    (ShipCombatSituation s) {
+      // Other ship on 7 o'clock.
+      s.ship.body.setTransform(new Vector2(-1.0, 15.0), Math.PI / 4);
+    },
+    (ShipCombatSituation s) {
+      // Other ship on 12 o'clock, rotation.
+      s.ship.body.setTransform(new Vector2(10.0, 10.0), - 3 * Math.PI / 4);
       s.ship.body.applyLinearImpulse(new Vector2(2.0, 0.0), new Vector2(0.0, -1.0));
-    },
-    (ShipCombatSituation s) {
-      print("- back slightly off");
-      s.ship.body.setTransform(new Vector2(0.0, 0.0), - Math.PI / 2 + 0.1);
     }
 ];
 
@@ -275,9 +283,10 @@ class FaceOtherShipMode extends ThrusterControllingShipBrainMode {
     num angleScore = ship.getAngleTo(target).abs();
     num angularScore = ship.body.angularVelocity.abs();
     num relativeScore = ship.getRelativeVelocityTo(target).length;
+    num consumptionScore = ship._currentPowerConsumption;
     
     num fitness = 
-        (10 * angleScore + angularScore + relativeScore);
+        (10 * angleScore + angularScore + relativeScore + consumptionScore);
     
     if (ship.body.contactList != null) {
       fitness += 50000;
@@ -290,6 +299,7 @@ class FaceOtherShipMode extends ThrusterControllingShipBrainMode {
 Angle (${ship.getAngleTo(target).toStringAsFixed(2)}) ${angleScore < 0.5 ? "*": ""}
 AnguV (${ship.body.angularVelocity.toStringAsFixed(2)})
 RelV  (${ship.getRelativeVelocityTo(target).length.toStringAsFixed(2)})
+Cons  (${consumptionScore.toStringAsFixed(2)})
 AbsV  (---)
 SCORE = ${fitness.toStringAsFixed(2)}
 CUMSC = ${worldState.cummulativeScore.toStringAsFixed(2)}
@@ -341,7 +351,7 @@ OUTP  = ${ship.brainMode.brain.use(inputs).map((num o) => o.toStringAsFixed(2)).
       return score;
     }
 
-    return 1;
+    return 1 + ship._currentPowerConsumption;
   }
 }
 
@@ -355,17 +365,15 @@ class RunAwayMode extends ThrusterControllingShipBrainMode {
   
   List<SetupFunction> setupFunctions = 
       new List<SetupFunction>.from(genericSetupFunctions)
-        ..removeLast()
-        ..removeLast()
         ..addAll([
             (ShipCombatSituation s) {
               print("- back with impulse");
-              s.ship.body.setTransform(new Vector2(0.0, 0.0), - Math.PI / 2);
+              s.ship.body.setTransform(new Vector2(0.0, -15.0), - Math.PI / 2);
               s.ship.body.applyLinearImpulse(new Vector2(2.0, 0.0), new Vector2(0.0, -1.0));
             },
             (ShipCombatSituation s) {
               print("- front with impulse");
-              s.ship.body.setTransform(new Vector2(0.0, 0.0), Math.PI / 2);
+              s.ship.body.setTransform(new Vector2(0.0, -15.0), Math.PI / 2);
               s.ship.body.applyLinearImpulse(new Vector2(0.0, 2.0), new Vector2(0.0, -1.0));
             }]); 
 
@@ -374,8 +382,10 @@ class RunAwayMode extends ThrusterControllingShipBrainMode {
     num velocityScore = 1 / (ship.getRelativeVelocityTo(target).length + 1);
     num proximityScore = 1 / Math.pow((ship.getRelativeVectorTo(target).length + 1) / 100, 2);  // 1 / (x/100)^2
     num angleScore = Math.PI - ship.getAngleTo(target).abs();
+    num consumptionScore = ship._currentPowerConsumption;
     
-    num fitness = velocityScore + proximityScore + angleScore;
+    num fitness = 
+        velocityScore + proximityScore + angleScore + consumptionScore;
     
     statusUpdateCounter++;
     if (statusUpdateCounter == STATUS_UPDATE_FREQ) {
@@ -385,6 +395,7 @@ class RunAwayMode extends ThrusterControllingShipBrainMode {
 Velo (${velocityScore.toStringAsFixed(2)})
 Prox (${proximityScore.toStringAsFixed(2)})
 Angl (${angleScore.toStringAsFixed(2)}) ${angleScore < 0.5 ? "*" : ""}
+Cons (${consumptionScore.toStringAsFixed(2)})
 SCORE = ${fitness.toStringAsFixed(2)}
 CUMSC = ${s.cummulativeScore.toStringAsFixed(2)}
 INPT  = ${inputs.map((num o) => o.toStringAsFixed(2)).join(" ")}
@@ -403,6 +414,8 @@ OUTP  = ${ship.brainMode.brain.use(inputs).map((num o) => o.toStringAsFixed(2)).
 
 class DockLeftMode extends ThrusterControllingShipBrainMode {
   int inputNeuronsCount = 8;
+  
+  static final DESIRED_DISTANCE = 5;
   
   var _bestPhenotypeGenes = null;
   
@@ -428,13 +441,16 @@ class DockLeftMode extends ThrusterControllingShipBrainMode {
   num iterativeFitnessFunction(AIBox2DShip ship, Box2DShip target, 
                                ShipCombatSituation s, Object userData) {
     num velocityScore = ship.getRelativeVelocityTo(target).length;
-    num proximityScore = ship.getRelativeVectorTo(target).length;
+    num proximityScore = 
+        (ship.getRelativeVectorTo(target).length - DESIRED_DISTANCE).abs();
     num angle = ship.getAngleTo(target);
     num wantedAngle = - Math.PI / 2;
     num angleScore = (angle - wantedAngle).abs();
     num angVel = ship.body.angularVelocity.abs();
+    num consumptionScore = ship._currentPowerConsumption;
     
-    num fitness = velocityScore + 5 * proximityScore + 5 * angleScore + angVel;
+    num fitness = velocityScore + proximityScore + angleScore + angVel +
+        consumptionScore;
     
     statusUpdateCounter++;
     if (statusUpdateCounter == STATUS_UPDATE_FREQ) {
@@ -495,8 +511,9 @@ class MaintainRelativePositionMode extends ThrusterControllingShipBrainMode {
                                ShipCombatSituation s, Object userData) {
     num velocityScore = ship.getRelativeVelocityTo(target).length;
     num angVel = ship.body.angularVelocity.abs();
+    num consumptionScore = ship._currentPowerConsumption;
     
-    num fitness = 10 * velocityScore + angVel;
+    num fitness = 10 * velocityScore + angVel + consumptionScore;
     
     statusUpdateCounter++;
     if (statusUpdateCounter == STATUS_UPDATE_FREQ) {
@@ -505,6 +522,7 @@ class MaintainRelativePositionMode extends ThrusterControllingShipBrainMode {
       experimentStatusEl.text = """ 
 Velo (${velocityScore.toStringAsFixed(2)})
 AngV (${(ship.body.angularVelocity).toStringAsFixed(2)})
+Cons (${consumptionScore.toStringAsFixed(2)})
 SCORE = ${fitness.toStringAsFixed(2)}
 CUMSC = ${s.cummulativeScore.toStringAsFixed(2)}
 INPT  = ${inputs.map((num o) => o.toStringAsFixed(2)).join(" ")}
@@ -611,6 +629,8 @@ class Box2DShip {
   Body body;
   final List<Thruster> thrusters;
   
+  num _currentPowerConsumption = 0;
+  
   Box2DShip(this.situation, num length, num width, Vector2 position,
       {num initialAngle: 0,
        this.thrusters: const []}) {
@@ -649,6 +669,8 @@ class Box2DShip {
     Matrix2 rotm = new Matrix2.rotation(-body.angle);
     body.applyForce(thruster.maxForce.scaled(relativeForce.toDouble()).postmultiply(rotm), 
         body.getWorldPoint(thruster.localPosition));
+    
+    _currentPowerConsumption += thruster.maxForce.length * relativeForce;
     
     situation.debugDraw.drawSolidCircle(body.getWorldPoint(thruster.localPosition), 
         thruster.maxForce.length * relativeForce * 1, 
@@ -706,6 +728,7 @@ class AIBox2DShip extends Box2DShip {
   
   void applyBrain() {
     if (brainMode != null) {
+      _currentPowerConsumption = 0;
       brainMode.control(this, target, situation, userData);
     }
   }
