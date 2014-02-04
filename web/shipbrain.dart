@@ -273,7 +273,7 @@ class FaceOtherShipMode extends ThrusterControllingShipBrainMode {
   List<SetupFunction> setupFunctions = genericSetupFunctions
       ..add((ShipCombatSituation s) {
         print("- back slightly off, target moving");
-        s.ship.body.setTransform(new Vector2(0.0, 0.0), - Math.PI / 2 + 0.1);
+        s.ship.body.setTransform(new Vector2(0.0, 10.0), - Math.PI / 2 + 0.1);
         s.ships.last.body.applyLinearImpulse(new Vector2(-0.1, -0.2), new Vector2(0.0, -1.0));
       });
   
