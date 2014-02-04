@@ -263,7 +263,7 @@ final List<SetupFunction> genericSetupFunctions = [
 class FaceOtherShipMode extends ThrusterControllingShipBrainMode {
   FaceOtherShipMode() : super();
   
-  var _bestPhenotypeGenes = null;
+  var _bestPhenotypeGenes = [-0.7601617949724568,-1,0.45822318983942334,1,-0.5776636016813901,1,-0.02811954270564332,0.7065358268635129,0.034772739131040176,-0.15265648162981527,0.9647157646228137,0.03316172762526426,0.8814533558173556,1,1,0.5997627471259133,-1,0.9874415642613896,-1,-1,-1,0.08984205399993717,-0.7931491209107315,1,-0.42372827153850223,0.3188561177919733,-1,0.9655231412354783,0.10622548434766865,1,0.7648211921060399,1,-0.30361790032521085,1,-1,-1,-0.9588766724541435,0.76296380426721,-1,0.043552698674030665,0.9440932109965157,-0.2562949598128368,1,-0.21237298706653296,0.2685974038718877,1,0.639971758084352,1,-1,1,-1,-0.20276982453517522,-0.6823932958607872,-0.4564960043929347,-0.7996902763363447,0.6875037090416876,-0.30271807588967947,-0.08281662407889634,1,1,1,-0.3395157454868818,1,0.8223097670105795,0.581090195865196,0.30512346490948117,1,0.5580978062792483,0.41929796077585024,0.049248294381917246,0.5081090424340764,1,0.5410853661286028,1,0.23729328418336104,1,1,0.16162718875932924,0.8522584155884616,0.6978079521534466,1,-0.6433686824989173,1,1,0.9546769952720011,0.22681211161685022,0.7700300499764143,1,0.9206506320630155,0.5471982381673719,-0.4473794089368899,0.3707646865914942,-0.07030709362098286,-0.40290701618779146,1,1,1,0.7934372183539691,-0.6344523476357986,0.7716647561930159,1,-0.5465672919313012,1,0.639626596357513,1];
 
   int inputNeuronsCount = 8;
   
@@ -283,7 +283,7 @@ class FaceOtherShipMode extends ThrusterControllingShipBrainMode {
     num angleScore = ship.getAngleTo(target).abs();
     num angularScore = ship.body.angularVelocity.abs();
     num relativeScore = ship.getRelativeVelocityTo(target).length;
-    num consumptionScore = ship._currentPowerConsumption;
+    num consumptionScore = ship._currentPowerConsumption / 10;
     
     num fitness = 
         (10 * angleScore + angularScore + relativeScore + consumptionScore);
@@ -351,7 +351,7 @@ OUTP  = ${ship.brainMode.brain.use(inputs).map((num o) => o.toStringAsFixed(2)).
       return score;
     }
 
-    return 1 + ship._currentPowerConsumption;
+    return 1 + ship._currentPowerConsumption / 10;
   }
 }
 
@@ -382,7 +382,7 @@ class RunAwayMode extends ThrusterControllingShipBrainMode {
     num velocityScore = 1 / (ship.getRelativeVelocityTo(target).length + 1);
     num proximityScore = 1 / Math.pow((ship.getRelativeVectorTo(target).length + 1) / 100, 2);  // 1 / (x/100)^2
     num angleScore = Math.PI - ship.getAngleTo(target).abs();
-    num consumptionScore = ship._currentPowerConsumption;
+    num consumptionScore = ship._currentPowerConsumption / 10;
     
     num fitness = 
         velocityScore + proximityScore + angleScore + consumptionScore;
@@ -424,8 +424,6 @@ class DockLeftMode extends ThrusterControllingShipBrainMode {
   
   List<SetupFunction> setupFunctions = 
       new List<SetupFunction>.from(genericSetupFunctions)
-        ..removeLast()
-        ..removeLast()
         ..addAll([
             (ShipCombatSituation s) {
               print("- back with impulse");
@@ -447,7 +445,7 @@ class DockLeftMode extends ThrusterControllingShipBrainMode {
     num wantedAngle = - Math.PI / 2;
     num angleScore = (angle - wantedAngle).abs();
     num angVel = ship.body.angularVelocity.abs();
-    num consumptionScore = ship._currentPowerConsumption;
+    num consumptionScore = ship._currentPowerConsumption / 10;
     
     num fitness = velocityScore + proximityScore + angleScore + angVel +
         consumptionScore;
@@ -511,7 +509,7 @@ class MaintainRelativePositionMode extends ThrusterControllingShipBrainMode {
                                ShipCombatSituation s, Object userData) {
     num velocityScore = ship.getRelativeVelocityTo(target).length;
     num angVel = ship.body.angularVelocity.abs();
-    num consumptionScore = ship._currentPowerConsumption;
+    num consumptionScore = ship._currentPowerConsumption / 10;
     
     num fitness = 10 * velocityScore + angVel + consumptionScore;
     
