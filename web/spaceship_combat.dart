@@ -2,11 +2,10 @@ library spaceship_combat;
 
 import "dart:async";
 import "dart:math" as Math;
-import "package:vector_math/vector_math.dart";
 import "package:darwin/darwin.dart";
 import "package:backy/backy.dart";
 import "package:box2d/box2d_browser.dart";
-import "dart:html";
+import "dart:html" hide Body;
 
 import "box2d_demo.dart";
 
@@ -20,11 +19,11 @@ PreElement resultsEl;
 ShipCombatSituation currentSituation;
 
 List<ShipBrainMode> modes = [
-    new FaceOtherShipMode(),
-    new RamMode(),
-    new RunAwayMode(),
-    new DockLeftMode(),
-    new MaintainRelativePositionMode()
+  new FaceOtherShipMode(),
+  new RamMode(),
+  new RunAwayMode(),
+  new DockLeftMode(),
+  new MaintainRelativePositionMode()
 ];
 
 void main() {
@@ -32,42 +31,54 @@ void main() {
   globalStatusEl = querySelector("#global-status");
   simEl = querySelector("#sim");
   resultsEl = querySelector("#results");
-  
-  querySelector("#speed1x").onClick.listen((_) => 
-      Demo.computationToShowRatio = 1);
-  querySelector("#speed10x").onClick.listen((_) => 
-      Demo.computationToShowRatio = 10);
-  querySelector("#speed100x").onClick.listen((_) => 
-      Demo.computationToShowRatio = 100);
-  querySelector("#speed1000x").onClick.listen((_) => 
-      Demo.computationToShowRatio = 1000);
-  
-  querySelector("#putOnNoseTrain").onClick.listen((_) => 
-      runGeneticAlgorithm(new FaceOtherShipMode()));
-  querySelector("#ramTrain").onClick.listen((_) => 
-      runGeneticAlgorithm(new RamMode()));
-  querySelector("#runAwayTrain").onClick.listen((_) => 
-      runGeneticAlgorithm(new RunAwayMode()));
-  querySelector("#dockLeftTrain").onClick.listen((_) => 
-      runGeneticAlgorithm(new DockLeftMode()));
-  querySelector("#maintainSpeedTrain").onClick.listen((_) => 
-      runGeneticAlgorithm(new MaintainRelativePositionMode()));
-  
-  querySelector("#trainAll").onClick.listen((_) => 
-      trainAll(0));
-  
-  querySelector("#putOnNoseBest").onClick.listen((_) => 
-      loopBestPhenotype(new FaceOtherShipMode()));
-  querySelector("#ramBest").onClick.listen((_) => 
-      loopBestPhenotype(new RamMode()));
-  querySelector("#runAwayBest").onClick.listen((_) => 
-      loopBestPhenotype(new RunAwayMode()));
-  querySelector("#dockLeftBest").onClick.listen((_) => 
-      loopBestPhenotype(new DockLeftMode()));
-  querySelector("#maintainSpeedBest").onClick.listen((_) => 
-      loopBestPhenotype(new MaintainRelativePositionMode()));
 
-  
+  querySelector("#speed1x")
+      .onClick
+      .listen((_) => Demo.computationToShowRatio = 1);
+  querySelector("#speed10x")
+      .onClick
+      .listen((_) => Demo.computationToShowRatio = 10);
+  querySelector("#speed100x")
+      .onClick
+      .listen((_) => Demo.computationToShowRatio = 100);
+  querySelector("#speed1000x")
+      .onClick
+      .listen((_) => Demo.computationToShowRatio = 1000);
+
+  querySelector("#putOnNoseTrain")
+      .onClick
+      .listen((_) => runGeneticAlgorithm(new FaceOtherShipMode()));
+  querySelector("#ramTrain")
+      .onClick
+      .listen((_) => runGeneticAlgorithm(new RamMode()));
+  querySelector("#runAwayTrain")
+      .onClick
+      .listen((_) => runGeneticAlgorithm(new RunAwayMode()));
+  querySelector("#dockLeftTrain")
+      .onClick
+      .listen((_) => runGeneticAlgorithm(new DockLeftMode()));
+  querySelector("#maintainSpeedTrain")
+      .onClick
+      .listen((_) => runGeneticAlgorithm(new MaintainRelativePositionMode()));
+
+  // querySelector("#trainAll").onClick.listen((_) => trainAll(0));
+
+  querySelector("#putOnNoseBest")
+      .onClick
+      .listen((_) => loopBestPhenotype(new FaceOtherShipMode()));
+  querySelector("#ramBest")
+      .onClick
+      .listen((_) => loopBestPhenotype(new RamMode()));
+  querySelector("#runAwayBest")
+      .onClick
+      .listen((_) => loopBestPhenotype(new RunAwayMode()));
+  querySelector("#dockLeftBest")
+      .onClick
+      .listen((_) => loopBestPhenotype(new DockLeftMode()));
+  querySelector("#maintainSpeedBest")
+      .onClick
+      .listen((_) => loopBestPhenotype(new MaintainRelativePositionMode()));
+
   runGeneticAlgorithm(new FaceOtherShipMode());
 }
 
@@ -77,11 +88,10 @@ void trainAll(int i) {
   if (i >= modes.length) {
     resultsEl.text = "ALL RESULTS:\n";
     resultsEl.text += winners.map((ph) => ph.genesAsString).join("\n");
-    return;  // We're done.
+    return; // We're done.
   }
-  
-  runGeneticAlgorithm(modes[i])
-  .then((NeuroPilotPhenotype winner) {
+
+  runGeneticAlgorithm(modes[i]).then((NeuroPilotPhenotype winner) {
     winners.add(winner);
     trainAll(i + 1);
   });
@@ -92,20 +102,20 @@ void trainAll(int i) {
  */
 void loopBestPhenotype(ShipBrainMode modeToTest, [int i = 0]) {
   if (currentSituation != null) currentSituation.destroy();
-  
+
   globalStatusEl.text = "Showing best for $modeToTest";
-  
+
   if (modeToTest.bestPhenotype == null) {
     globalStatusEl.text += "\nERROR: No best phenotype found so far.";
     return;
   }
-  
+
   print("Experiment $i");
   if (i >= modeToTest.setupFunctions.length) {
-    new Future(() => loopBestPhenotype(modeToTest, 0));  // restart
+    new Future(() => loopBestPhenotype(modeToTest, 0)); // restart
     return;
   }
-  
+
   ShipCombatSituation s = new ShipCombatSituation(
       fitnessFunction: modeToTest.iterativeFitnessFunction,
       maxTimeToRun: modeToTest.timeToEvaluate);
@@ -133,14 +143,14 @@ void loopBestPhenotype(ShipBrainMode modeToTest, [int i = 0]) {
 Future<NeuroPilotPhenotype> runGeneticAlgorithm(ShipBrainMode modeToTest) {
   var completer = new Completer();
   if (currentSituation != null) currentSituation.destroy();
-  
+
   globalStatusEl.text = "Evolving $modeToTest";
-  
+
   int firstGenerationSize = 20;
   var firstGeneration = new Generation<NeuroPilotPhenotype>();
-  
-  List chromosomesList;  // For continuing an evolution process.
-  
+
+  List chromosomesList; // For continuing an evolution process.
+
 //chromosomesList = [
 //[0.656042246016904,-1,-0.24081318444856392,0.5744812279030207,0.2294102058580787,1,0.3035244461389026,-1,-1,0.9788210371967068,-1,-0.30394320371064953,0.541511346181798,-0.4919182529775268,0.06441859930483651,1,-0.8866056556621515,-0.1523101906619717,1,-0.5333387891790473,-1,0.2114781396876071,-1,0.47062753360648335,0.37469768444830565,-1,-1,0.7553430133047478,-1,0.8036223092026535,0.46107153121756195,0.5584411618106389,0.5880153611491499,-1,1,0.7246010776546117,0.6380770183191189,1,1,1,0.8834377090394323,-1,0.9034351422933586,1,0.7532839617435458,1,0.9569661327238526,-1,-1,-1,-1,-1,-1,-0.13176506082818373,0.45506549060346924,-0.039621954389641445,-0.4293651779480425,-0.6297581134691022,0.005330164394882431,1,-0.3925779880446416,-0.8135402410935644,0.5133826377775486,-1,-0.7147878509754113,-1,0.08415824234521363,1,0.7789551787282964,1,-1,1,-1,-1,-1,-1,0.6940740089925037,-0.8860931172536737],
 //[1,-1,-0.24081318444856392,0.5744812279030207,0.2294102058580787,1,0.3035244461389026,-1,-1,0.9788210371967068,-1,-0.30394320371064953,1,-0.65725713290285,0.06441859930483651,1,-0.8866056556621515,-0.1523101906619717,1,-0.5333387891790473,-1,0.2114781396876071,-0.9216289836952081,0.47062753360648335,0.37469768444830565,-1,-1,0.3153966366056331,-1,0.3936570980602092,0.46107153121756195,0.5584411618106389,0.5880153611491499,-1,1,0.7246010776546117,0.6380770183191189,1,1,1,0.8834377090394323,-0.8754321529101186,0.9034351422933586,1,0.7532839617435458,1,0.9569661327238526,-1,-1,-1,-1,0.6587097038459484,-0.5611031364488495,-0.3660292371754801,0.45506549060346924,-0.039621954389641445,-0.4293651779480425,-0.6297581134691022,0.005330164394882431,1,-0.3925779880446416,-0.8135402410935644,0.5133826377775486,-0.3347945708169964,-1,-1,0.08415824234521363,1,0.7789551787282964,1,-1,1,-1,-1,-1,-1,0.6940740089925037,-0.8860931172536737],
@@ -163,14 +173,13 @@ Future<NeuroPilotPhenotype> runGeneticAlgorithm(ShipBrainMode modeToTest) {
 //[1,-1,-0.24081318444856392,0.5744812279030207,0.2294102058580787,1,0.3035244461389026,-1,-1,0.9788210371967068,-1,0.4729139858876745,1,-0.65725713290285,-1,1,-0.8866056556621515,-0.6747100617654358,1,-0.5333387891790473,-1,0.864497278944877,-1,0.47062753360648335,-0.0627640380482537,-1,-1,0.7553430133047478,-1,0.3936570980602092,0.46107153121756195,0.5584411618106389,0.5880153611491499,-1,1,0.7246010776546117,0.6380770183191189,1,1,1,1,-0.8754321529101186,0.9034351422933586,1,0.7532839617435458,1,0.9569661327238526,-1,-1,-1,-1,-0.24725117381601835,-1,-0.3660292371754801,0.45506549060346924,-0.039621954389641445,-0.4708800645739575,-0.6297581134691022,0.005330164394882431,1,-0.3925779880446416,-0.8731240899732828,0.5133826377775486,-0.3347945708169964,-1,-0.9726085102700306,0.08415824234521363,1,0.7789551787282964,1,-1,1,-1,-1,-1,-0.39428225190058974,0.6940740089925037,-0.8860931172536737],
 //[0.656042246016904,-1,-0.24081318444856392,0.5744812279030207,0.2294102058580787,1,0.3035244461389026,-1,-1,0.5066924590542783,-1,-0.30394320371064953,0.541511346181798,-0.4919182529775268,0.06441859930483651,0.6979449153249508,-0.8866056556621515,-0.1523101906619717,1,-0.5333387891790473,-0.10354538923425571,0.2114781396876071,-1,0.47062753360648335,-0.13150060621124782,-1,-1,0.7553430133047478,-1,0.8036223092026535,0.46107153121756195,0.5584411618106389,0.5880153611491499,-1,1,0.7246010776546117,0.6380770183191189,1,1,1,0.8834377090394323,-0.8754321529101186,0.9034351422933586,1,0.7532839617435458,1,0.9569661327238526,-1,-0.8942846366337476,-1,-1,-1,-0.5611031364488495,-0.13176506082818373,0.45506549060346924,-0.039621954389641445,-0.4293651779480425,-0.7380715932174475,0.005330164394882431,1,-0.3925779880446416,-0.8135402410935644,0.5133826377775486,-1,-0.7147878509754113,-1,-0.1441293552639238,1,0.7789551787282964,1,-1,1,-1,-1,-1,-1,0.6940740089925037,-0.8860931172536737]
 //];
-  
+
   var breeder = new GenerationBreeder<NeuroPilotPhenotype>(
-      () => new NeuroPilotPhenotype())
-    ..crossoverPropability = 0.8;
+      () => new NeuroPilotPhenotype())..crossoverPropability = 0.8;
   var evaluator = new NeuroPilotSerialEvaluator(modeToTest);
-  
+
   if (chromosomesList == null) {
-    AIBox2DShip tempShip = 
+    AIBox2DShip tempShip =
         NeuroPilotSerialEvaluator._createBodega(new ShipCombatSituation());
     tempShip.target = tempShip;
     for (int i = 0; i < firstGenerationSize; i++) {
@@ -185,22 +194,21 @@ Future<NeuroPilotPhenotype> runGeneticAlgorithm(ShipBrainMode modeToTest) {
       firstGeneration.members.add(ph);
     });
   }
-  
-  GeneticAlgorithm<NeuroPilotPhenotype> algo = 
-      new GeneticAlgorithm(firstGeneration, evaluator, breeder,
-          statusf: (status) => globalStatusEl.text = status.toString());
+
+  GeneticAlgorithm<NeuroPilotPhenotype> algo = new GeneticAlgorithm(
+      firstGeneration, evaluator, breeder,
+      statusf: (status) => globalStatusEl.text = status.toString());
   algo.onGenerationEvaluated.listen((Generation<NeuroPilotPhenotype> g) {
     resultsEl.text = g.members.first.genesAsString;
     if (modeToTest._bestPhenotypeGenes == null) {
       modeToTest._bestPhenotypeGenes = g.members.first.genes;
     }
   });
-  algo.runUntilDone()
-  .then((_) {
+  algo.runUntilDone().then((_) {
     algo.generations.last.members
-      .forEach((Phenotype ph) => print("${ph.genesAsString},"));
+        .forEach((Phenotype ph) => print("${ph.genesAsString},"));
     completer.complete(algo.generations.last.best);
   });
-  
+
   return completer.future;
 }

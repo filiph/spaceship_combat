@@ -1,11 +1,11 @@
 name: spaceship_combat
-description: A sample web application
+description: A genetic algorithm breeding spaceship-piloting neural network.
 author: Filip Hracek <filip.hracek@gmail.com>
 dependencies:
-  darwin: any
-  browser: any
-  box2d: any
-  backy: 0.2.1
+  darwin: '^0.2.4'
+  browser: '>=0.10.0 <0.11.0'
+  box2d: '^0.2.0'
+  backy: '^0.2.1'
 #dev_dependencies:
 #  darwin: 
 #    path: ../darwin

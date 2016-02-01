@@ -1,6 +1,6 @@
 library box2d_demo;
 
-import "dart:html";
+import "dart:html" hide Body;
 import "dart:async";
 import "package:box2d/box2d_browser.dart";
 
@@ -22,7 +22,7 @@ abstract class Demo {
   static const double GRAVITY = -10.0;
 
   /** The timestep and iteration numbers. */
-  static const num TIME_STEP = 1/30;
+  static const num TIME_STEP = 1 / 30;
   static const int VELOCITY_ITERATIONS = 10;
   static const int POSITION_ITERATIONS = 10;
 
@@ -61,31 +61,34 @@ abstract class Demo {
   // every frame to minimize overhead.
   Stopwatch _stopwatch;
 
-  Demo(String name, this.canvasContainerEl, 
+  Demo(String name, this.canvasContainerEl,
       [Vector2 gravity, this.viewportScale = _VIEWPORT_SCALE]) {
 //    _stopwatch = new Stopwatch()..start();
     bool doSleep = true;
     if (null == gravity) gravity = new Vector2(0.0, GRAVITY);
-    world = new World(gravity, doSleep, new DefaultWorldPool());
+    world = new World.withPool(
+        gravity,
+        new DefaultWorldPool(
+            World.WORLD_POOL_SIZE, World.WORLD_POOL_CONTAINER_SIZE));
   }
-  
+
   final Element canvasContainerEl;
 
   static int computationToShowRatio = 1;
-  
+
   /** Advances the world forward by timestep seconds. */
   void step(num timestamp, [Function updateCallback]) {
     if (destroyed) return;
-    
+
     if (computationToShowRatio <= 10) {
       // Clear the animation panel
       ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
     }
-    
+
     bool shouldContinue = true;
     for (int i = 0; i < computationToShowRatio; i++) {
-      world.step(TIME_STEP, VELOCITY_ITERATIONS, POSITION_ITERATIONS);
-      
+      world.stepDt(TIME_STEP, VELOCITY_ITERATIONS, POSITION_ITERATIONS);
+
       if (updateCallback != null) {
         shouldContinue = updateCallback(1);
         if (!shouldContinue) {
@@ -93,7 +96,7 @@ abstract class Demo {
         }
       }
     }
-    
+
     if (computationToShowRatio > 10) {
       // Clear the animation panel
       ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
@@ -107,7 +110,7 @@ abstract class Demo {
         step(1, updateCallback);
       });
     }
-    
+
 //    window.requestAnimationFrame((num time) {
 //      if (updateCallback != null) {
 //        bool cont = updateCallback(time);
@@ -151,9 +154,9 @@ abstract class Demo {
 //        worldStepTime.innerHtml = "${elapsedUs / 1000} ms";
 //    });
   }
-  
+
   bool destroyed = false;
-  
+
   void destroy() {
     canvas.remove();
     destroyed = true;
