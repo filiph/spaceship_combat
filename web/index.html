@@ -8,7 +8,9 @@
   </head>
   <body>
     <h1>Spaceship genetic algo</h1>
-       
+
+    <pre id="results"></pre>
+
     <div class="floater">
       <pre id="global-status"></pre>
       <pre id="experiment-status"></pre>
@@ -50,8 +52,27 @@
         <button id="runAwayTrain">Train</button>
         <button id="runAwayBest">Best</button>
       </p>
-    </div>
 
-    <script src="spaceship_combat.dart.js"></script>
+      <p>
+        Dock to ship from left side: 
+        <button id="dockLeftTrain">Train</button>
+        <button id="dockLeftBest">Best</button>
+      </p>
+      
+      <p>
+        Maintain speed: 
+        <button id="maintainSpeedTrain">Train</button>
+        <button id="maintainSpeedBest">Best</button>
+      </p>
+      
+      <p>
+        All: <button id="trainAll">Train all</button>
+      </p>
+    </div>
+    
+    <div id="sim"></div>
+
+    <script type="application/dart" src="spaceship_combat.dart"></script>
+    <script src="packages/browser/dart.js"></script>
   </body>
 </html>
